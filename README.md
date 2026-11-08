@@ -15,7 +15,10 @@ over Tailscale.
   material used yesterday, who's on shift today, Pending Approval count.
 - **Kanban:** customizable columns (Backlog / To Do / In Progress / Waiting /
   Pending Approval / Done), drag-and-drop + "Move to" menu, add/rename/delete
-  columns.
+  columns. The "+ Add task" button only appears in **Backlog and To Do** —
+  new work is created there; the other columns are states a task moves into,
+  not entry points. (Enforced server-side too: creating a task straight into
+  In Progress, Waiting, Pending Approval or Done is rejected.)
 - **To-Do list:** same tasks, grouped by assignee.
 - **Roles & approval (server-enforced, not just hidden in the UI):**
   - **Head NOC (Rivaldo)** — approves anything.
@@ -134,7 +137,8 @@ All mutations take `actorId` in the JSON body; rules are enforced server-side.
 
 - `GET /api/state` — people, columns, tasks (+materials/files), shifts,
   material days (+lines), activity, material names.
-- `POST /api/tasks` · `PATCH /api/tasks/:id` · `DELETE /api/tasks/:id`
+- `POST /api/tasks` (new tasks only in Backlog or To Do — other `columnId`
+  values are rejected) · `PATCH /api/tasks/:id` · `DELETE /api/tasks/:id`
 - `POST /api/tasks/:id/move` `{columnId}` — moving to a Done column requires
   approval rights (403 otherwise). `POST /api/tasks/:id/reject` `{reason}`.
 - `POST /api/columns` · `PATCH /api/columns/:id` · `DELETE /api/columns/:id`

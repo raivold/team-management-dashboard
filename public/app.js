@@ -18,7 +18,7 @@ en: {
   mat_out_yday:'Material out yesterday', nothing_done_yday:'Nothing completed yesterday.', nothing_due_today:'Nothing due today.',
   no_shifts_today:'${t(\'no_shifts_today\')}', no_mat_yday:'${t(\'no_mat_yday\')}',
   status_label:'Status', by_label:'by',
-  new_task:'+ New task', add_column:'+ Add column', filter_ph:'Filter by city, customer, technician…',
+  new_task:'+ Add task', add_column:'+ Add column', filter_ph:'Filter by city, customer, technician…',
   empty_col:'Empty', move_to:'Move to…',
   todo_title:'To-Do list', todo_sub:'Same tasks as the Kanban, grouped by assignee. Field technicians appear as assignees only — they have no login.',
   cal_title:'Calendar', prev:'‹ Prev', next:'Next ›', today_btn:'Today',
@@ -80,7 +80,7 @@ id: {
   mat_out_yday:'Material keluar kemarin', nothing_done_yday:'Tidak ada yang selesai kemarin.', nothing_due_today:'Tidak ada yang jatuh tempo hari ini.',
   no_shifts_today:'Tidak ada shift tercatat hari ini — impor file shift.', no_mat_yday:'Tidak ada catatan material untuk kemarin.',
   status_label:'Status', by_label:'oleh',
-  new_task:'+ Tugas baru', add_column:'+ Tambah kolom', filter_ph:'Filter berdasarkan kota, pelanggan, teknisi…',
+  new_task:'+ Tambah tugas', add_column:'+ Tambah kolom', filter_ph:'Filter berdasarkan kota, pelanggan, teknisi…',
   empty_col:'Kosong', move_to:'Pindah ke…',
   todo_title:'Daftar Tugas', todo_sub:'Tugas yang sama dengan Kanban, dikelompokkan berdasarkan penanggung jawab. Teknisi lapangan hanya muncul sebagai penanggung jawab — mereka tidak punya login.',
   cal_title:'Kalender', prev:'‹ Sebelumnya', next:'Berikutnya ›', today_btn:'Hari ini',
@@ -171,6 +171,12 @@ const ydayStr = () => { const d = new Date(); d.setDate(d.getDate() - 1); return
 const person = (id) => S.people.find((p) => p.id === id);
 const personName = (id) => person(id)?.name || '—';
 const colById = (id) => S.columns.find((c) => c.id === id);
+// New tasks may only be created in Backlog (parked/future work) or To Do
+// (ready to work on now). Every other column is a state a task moves into
+// via drag-and-drop / "Move to", not an entry point. Rule is by column
+// name, not position, so a custom column never gets an Add Task button
+// unless it is named Backlog or To Do.
+const isEntryColumn = (c) => c && ['backlog', 'to do'].includes(String(c.name || '').trim().toLowerCase());
 const doneCol = () => S.columns.find((c) => c.kind === 'done');
 const reviewCol = () => S.columns.find((c) => c.kind === 'review');
 const actor = () => person(actorId) || S.people[0];
@@ -194,7 +200,6 @@ const isWM = () => actor().role === 'warehouse_manager';
 // this only reflects it in the UI.
 function applyStaticText() {
   document.querySelectorAll('#nav button').forEach((b) => { b.textContent = t('nav_' + b.dataset.view); });
-  const nb = document.getElementById('newTaskBtn'); if (nb) nb.textContent = t('new_task');
   const ab = document.getElementById('addColBtn'); if (ab) ab.textContent = t('add_column');
   const bf = document.getElementById('boardFilter'); if (bf) bf.placeholder = t('filter_ph');
   const sub = document.querySelector('.topbar .sub'); if (sub) sub.textContent = t('subtitle');
@@ -291,8 +296,12 @@ function renderBoard() {
     return `<div class="column" data-col="${c.id}"><h3>${esc(tCol(c.name))} (${list.length})
       <span><button class="btn small" data-rename-col="${c.id}">✎</button>
       <button class="btn small" data-del-col="${c.id}">✕</button></span></h3>
-      ${list.map(taskCard).join('') || '<p class="muted">${t(\'empty_col\')}</p>'}</div>`;
+      ${list.map(taskCard).join('') || '<p class="muted">${t(\'empty_col\')}</p>'}
+      ${isEntryColumn(c) ? `<button class="btn primary" data-add-task="${c.id}">${t('new_task')}</button>` : ''}</div>`;
   }).join('');
+  document.querySelectorAll('[data-add-task]').forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation(); newTaskForm(Number(b.dataset.addTask));
+  }));
   document.querySelectorAll('.task').forEach((el) => {
     el.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', el.dataset.id));
   });
@@ -594,7 +603,9 @@ function openTask(id) {
 }
 
 // ---- New task ----
-function newTaskForm() {
+// columnId is the entry column the button was clicked in (Backlog or To Do);
+// a new task is always created there, never in a later column.
+function newTaskForm(columnId) {
   const staff = S.people.filter((p) => p.role !== 'field_tech');
   const field = S.people.filter((p) => p.role === 'field_tech');
   $('#taskDetail').innerHTML = `<h2>${t('new_task_title')}</h2>
@@ -616,7 +627,7 @@ function newTaskForm() {
     const title = $('#ntTitle').value.trim();
     if (!title) { toast(t('title_required'), false); return; }
     try {
-      S = await api('/api/tasks', 'POST', { title, taskKind: $('#ntKind').value, department: $('#ntDept').value, priority: $('#ntPri').value, assigneeId: $('#ntAssignee').value ? Number($('#ntAssignee').value) : null, dueDate: $('#ntDue').value || null, customer: $('#ntCust').value, location: $('#ntLoc').value, serviceId: $('#ntSvc').value, description: $('#ntDesc').value });
+      S = await api('/api/tasks', 'POST', { title, taskKind: $('#ntKind').value, department: $('#ntDept').value, priority: $('#ntPri').value, assigneeId: $('#ntAssignee').value ? Number($('#ntAssignee').value) : null, dueDate: $('#ntDue').value || null, customer: $('#ntCust').value, location: $('#ntLoc').value, serviceId: $('#ntSvc').value, description: $('#ntDesc').value, columnId: columnId || null });
       $('#taskModal').classList.add('hidden'); toast(t('task_created')); switchView('board');
     } catch (err) { toast(err.message, false); }
   };
@@ -634,7 +645,6 @@ $('#closeModal').addEventListener('click', () => $('#taskModal').classList.add('
 $('#closeLightbox').addEventListener('click', () => $('#lightbox').classList.add('hidden'));
 $('#taskModal').addEventListener('click', (e) => { if (e.target.id === 'taskModal') $('#taskModal').classList.add('hidden'); });
 $('#lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') $('#lightbox').classList.add('hidden'); });
-$('#newTaskBtn').addEventListener('click', newTaskForm);
 $('#addColBtn').addEventListener('click', async () => {
   const name = prompt(t('new_col_name')); if (!name) return;
   try { S = await api('/api/columns', 'POST', { name }); renderAll(); } catch (err) { toast(err.message, false); }

@@ -280,8 +280,27 @@ app.post('/api/tasks', (req, res) => {
   const actor = requireActor(req, res); if (!actor) return;
   const b = req.body;
   if (!b.title) return res.status(400).json({ error: 'Title is required.' });
-  const firstCol = db.prepare('SELECT id FROM columns ORDER BY sortOrder LIMIT 1').get();
-  const colId = b.columnId || firstCol.id;
+  // New tasks may only be created in Backlog or To Do — the other columns
+  // are states a task moves into, not entry points. Enforced here so a
+  // direct API call cannot create a task straight into In Progress,
+  // Waiting, Pending Approval or Done. Rule is by column name, not
+  // position, so a custom column is only an entry point if it is named
+  // Backlog or To Do. With no column given, prefer Backlog, then To Do,
+  // then the first column (so creation never hard-fails if those two
+  // were renamed/deleted).
+  const entryCol = (name) => db.prepare("SELECT id FROM columns WHERE LOWER(TRIM(name))=?").get(name);
+  let colId = null;
+  if (b.columnId) {
+    const col = db.prepare('SELECT * FROM columns WHERE id=?').get(b.columnId);
+    if (!col) return res.status(400).json({ error: 'Column not found.' });
+    if (!['backlog', 'to do'].includes(col.name.trim().toLowerCase()))
+      return res.status(400).json({ error: `New tasks can only be created in Backlog or To Do, not in “${col.name}”. Move the task there instead.` });
+    colId = col.id;
+  } else {
+    colId = entryCol('backlog')?.id ?? entryCol('to do')?.id
+      ?? db.prepare('SELECT id FROM columns ORDER BY sortOrder LIMIT 1').get()?.id;
+    if (!colId) return res.status(400).json({ error: 'No columns exist yet.' });
+  }
   const r = db.prepare(`INSERT INTO tasks (title,description,customer,location,serviceId,priority,dueDate,
     department,taskKind,assigneeId,createdById,columnId,createdAt,updatedAt)
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
