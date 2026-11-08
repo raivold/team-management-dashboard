@@ -67,8 +67,8 @@ over Tailscale.
   persists across reloads. **Default is English** on first load, so existing
   users see no surprise change — Indonesian is one tap away. Proper names,
   customer names, and material names are never translated.
-- **Theme — dark / light:** a **🌙 Dark / ☀️ Light** toggle in the header,
-  next to EN | ID. **Default is light** on first load; the choice is saved
+- **Theme — dark / light:** a **🌙 Dark mode / ☀️ Light mode** toggle in the header,
+  next to EN | ID (🌙 Mode gelap / ☀️ Mode terang in Indonesian). **Default is light** on first load; the choice is saved
   in the browser (`localStorage`, key `tmd-theme`) and persists across
   reloads, and is applied before first paint so there is no light flash.
   Dark mode covers every view (Overview, Kanban, To-Do, Calendar, Materials,
@@ -77,6 +77,7 @@ over Tailscale.
 
 ## Changelog
 
+- **v1.7.0** — Visual parity pass vs the Muse prototype (same look for the same view, language, and theme; code underneath still differs). Header: theme toggle labels now match the prototype ("Dark mode" / "Light mode", "Mode gelap" / "Mode terang"). Kanban/To-Do: evidence badge, priority pills, and due dates now translate in ID; empty-column fallback renders correctly. Calendar: CSV "Preview import" button and match cells now translate in ID. Materials: "Add line" / "Issue morning material" buttons and day status (Terbuka / Terkirim / Disetujui / Ditandai) now translate in ID; the "Issue more" button no longer misuses the "Issued." toast string as its label; log/issue forms now use flex rows that wrap on phone width. Task panel: approval note and approval toast now translate in ID. Fixed 9 empty-state fallbacks (Overview, Board, Materials, task panel) that rendered the literal text `${tr('…')}` instead of the translated string. Toast no longer overrides the dark theme with an inline background (error toasts use a CSS class instead). English priorities now render capitalised ("Normal" / "High" / "Urgent"). No logic, roles, approval rules, or API behaviour changed; `server.js` untouched. Verified with a DOM-stub runtime test: every view renders in EN/light and ID/dark, full and empty states, with zero JS errors and no English leakage in ID mode. No live-browser visual check in this VM — remaining pixel-level differences (if any) still need a side-by-side screenshot check.
 - **v1.6.0** — Dark / light mode toggle in the header (🌙 Dark / ☀️ Light, 🌙 Gelap / ☀️ Terang in Indonesian), persisted in `localStorage` (`tmd-theme`), default light, applied before first paint. Dark theme is a `data-theme="dark"` override block in `styles.css` covering all views, panels, modals, tables, inputs, pills and toast. No logic, roles, approval rules, or API behaviour changed.
 - **v1.5.0** — Restyled the standalone to match the Muse prototype: same navy/blue/teal palette, now with soft shadows, 12–14px rounded cards/panels/columns, stat cards with coloured left accents, Kanban task cards that lift on hover, a gradient navy topbar, pill nav with shadow, cleaner tables, and rounded buttons/inputs/modals. CSS/layout only — no logic, roles, approval rules, i18n strings, or API behaviour changed; no external fonts/CDN.
 - **v1.4.1** — Bugfix: fixed `Failed to load: t is not a function` on Overview. The i18n translator was named `t` and got shadowed by local variables also named `t` (`todayStr()` result, task lookups). The translator is now `tr` throughout, and the broken `no_shifts_today` / `no_mat_yday` strings are plain text again (English + Indonesian).

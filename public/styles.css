@@ -20,6 +20,8 @@ a{color:var(--blue);text-decoration:none;font-weight:600}
 a:hover{text-decoration:underline}
 h2{margin:4px 0 6px;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--navy)}
 h3{margin:0 0 10px;font-size:16px;font-weight:700;color:var(--navy)}
+h4{margin:16px 0 8px;font-size:15px;font-weight:700;color:var(--navy)}
+.gallery figure{margin:0}
 ul{margin:6px 0;padding-left:20px}
 li{margin:6px 0}
 
@@ -122,12 +124,23 @@ tbody tr:hover{background:#f8fafc}
 .warnbox{background:#fff7e6;border:1px solid #f59e0b;border-radius:12px;padding:12px 14px;margin:10px 0}
 .okbox{background:#ecfdf5;border:1px solid var(--teal);border-radius:12px;padding:12px 14px;margin:10px 0}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 20px;border-radius:12px;z-index:99;font-weight:600;box-shadow:0 12px 30px rgba(0,0,0,.3)}
+.toast.error{background:var(--red)}
+/* Materials / task form rows: flex layout so the log-issue-add forms wrap
+   cleanly on phone width instead of overflowing on fixed inline widths. */
+.mat-log-row,.issue-row,.adhoc-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.mat-log-row label{flex:1 1 100%;margin:0}
+.mat-log-row input,.issue-row input,.adhoc-row input{max-width:100%}
+.mat-log-row input[type="text"],.adhoc-row input[type="text"]{flex:1 1 200px;min-width:0}
+#issueLines>div{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+#issueLines>div input{max-width:100%}
 
 /* ---- Calendar ---- */
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
 .cal .day{background:#fff;border:1px solid var(--line);border-radius:12px;min-height:96px;padding:8px;font-size:12px;box-shadow:var(--shadow-sm);transition:border-color .15s,box-shadow .15s}
 .cal .day:hover{border-color:#9db8d8;box-shadow:var(--shadow-md)}
 .cal .day.today{outline:2px solid var(--blue);background:#eff6ff}
+.cal .day b{font-size:13px}
+.cal .day div{overflow-wrap:anywhere}
 .cal .dow{font-weight:700;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 0}
 
 /* ---- Mobile ---- */
@@ -158,7 +171,7 @@ tbody tr:hover{background:#f8fafc}
   --shadow-md:0 1px 2px rgba(0,0,0,.4),0 8px 20px rgba(0,0,0,.45);
   --shadow-lg:0 24px 60px rgba(0,0,0,.6);
 }
-[data-theme="dark"] h2,[data-theme="dark"] h3,[data-theme="dark"] .task .t{color:var(--ink)}
+[data-theme="dark"] h2,[data-theme="dark"] h3,[data-theme="dark"] h4,[data-theme="dark"] .task .t{color:var(--ink)}
 [data-theme="dark"] a{color:#7fb3ec}
 [data-theme="dark"] .topbar{background:linear-gradient(180deg,#1b3355,#101d33)}
 [data-theme="dark"] .nav{background:#16233a;box-shadow:0 1px 4px rgba(0,0,0,.4)}
@@ -202,3 +215,4 @@ tbody tr:hover{background:#f8fafc}
 [data-theme="dark"] .cal .day.today{background:rgba(20,102,194,.28)}
 [data-theme="dark"] .cal .day:hover{border-color:#5b7ba6}
 [data-theme="dark"] .toast{background:#1e2f4d}
+[data-theme="dark"] .toast.error{background:#7f1d1d}

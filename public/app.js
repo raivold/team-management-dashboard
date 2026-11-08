@@ -10,7 +10,7 @@ const I18N = {
 en: {
   nav_overview:'Overview', nav_board:'Kanban', nav_todo:'To-Do', nav_calendar:'Calendar', nav_materials:'Materials', nav_team:'Team', nav_activity:'Activity',
   acting_as:'Acting as', demo_badge:'Prototype · demo data',
-  theme_dark:'🌙 Dark', theme_light:'☀️ Light',
+  theme_dark:'🌙 Dark mode', theme_light:'☀️ Light mode',
   subtitle:'PT Sakti Wijaya Network · NOC / OSP / Customer Service / Warehouse',
   overview_title:'Yesterday → Today', overview_sub:'What finished yesterday, what is due today, what material went out, who is on board.',
   done_yesterday:'Done yesterday', due_today:'Due today', overdue:'Overdue', mat_used_yday:'Material used yesterday (units)',
@@ -38,7 +38,7 @@ en: {
   submitted_waiting:'Submitted — awaiting Warehouse check (next day).',
   issue_new_day:'Issue morning material for a new day (Warehouse Manager)',
   issue_new_help:'Pick a date and list everything that might be used. This creates that day\'s issue list.',
-  add_line:'+ Add line', issue_morning:'Issue morning material',
+  add_line:'+ Add line', issue_morning:'Issue morning material', issue_btn:'Issue',
   date_label:'Date', item_name_ph:'Item name', qty_ph:'Qty', unit_ph:'Unit',
   where_ph:'Where did it go? e.g. Install Ibu Ratna, Binong',
   save_btn:'Save', submit_report:'Submit daily report',
@@ -73,7 +73,7 @@ en: {
 id: {
   nav_overview:'Ringkasan', nav_board:'Kanban', nav_todo:'Daftar Tugas', nav_calendar:'Kalender', nav_materials:'Material', nav_team:'Tim', nav_activity:'Aktivitas',
   acting_as:'Bertindak sebagai', demo_badge:'Prototipe · data demo',
-  theme_dark:'🌙 Gelap', theme_light:'☀️ Terang',
+  theme_dark:'🌙 Mode gelap', theme_light:'☀️ Mode terang',
   subtitle:'PT Sakti Wijaya Network · NOC / OSP / Layanan Pelanggan / Gudang',
   overview_title:'Kemarin → Hari Ini', overview_sub:'Apa yang selesai kemarin, apa yang harus selesai hari ini, material apa yang keluar, siapa yang bertugas.',
   done_yesterday:'Selesai kemarin', due_today:'Jatuh tempo hari ini', overdue:'Terlambat', mat_used_yday:'Material terpakai kemarin (unit)',
@@ -101,7 +101,7 @@ id: {
   submitted_waiting:'Sudah dikirim — menunggu pemeriksaan Gudang (hari berikutnya).',
   issue_new_day:'Keluarkan material pagi untuk hari baru (Warehouse Manager)',
   issue_new_help:'Pilih tanggal dan daftarkan semua yang mungkin dipakai. Ini membuat daftar pengeluaran hari itu.',
-  add_line:'+ Tambah baris', issue_morning:'Keluarkan material pagi',
+  add_line:'+ Tambah baris', issue_morning:'Keluarkan material pagi', issue_btn:'Keluarkan',
   date_label:'Tanggal', item_name_ph:'Nama barang', qty_ph:'Jml', unit_ph:'Satuan',
   where_ph:'Dipakai untuk apa? mis. Install Ibu Ratna, Binong',
   save_btn:'Simpan', submit_report:'Kirim laporan harian',
@@ -136,7 +136,7 @@ id: {
 const tr = (k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
 const COL_NAMES = { 'Backlog':['Backlog','Backlog'], 'To Do':['To Do','Yang Harus Dikerjakan'], 'In Progress':['In Progress','Sedang Dikerjakan'], 'Waiting':['Waiting','Menunggu'], 'Pending Approval':['Pending Approval','Menunggu Persetujuan'], 'Done':['Done','Selesai'] };
 const tCol = (name) => (COL_NAMES[name] ? COL_NAMES[name][lang === 'id' ? 1 : 0] : name);
-const tPri = (p) => ({ normal:['normal','Normal'], high:['high','Tinggi'], urgent:['urgent','Mendesak'] }[p] || [p, p])[lang === 'id' ? 1 : 0];
+const tPri = (p) => ({ normal:['Normal','Normal'], high:['High','Tinggi'], urgent:['Urgent','Mendesak'] }[p] || [p, p])[lang === 'id' ? 1 : 0];
 const tKind = (k) => ({ ticket:['Ticket','Tiket'], project:['Project','Proyek'], maintenance:['Maintenance','Pemeliharaan'], handover:['Handover','Serah Terima'], reminder:['Reminder','Pengingat'] }[k] || [k, k])[lang === 'id' ? 1 : 0];
 const tDept = (d) => ({ 'Head NOC':['Head NOC','Kepala NOC'], 'Customer Service':['Customer Service','Layanan Pelanggan'], 'Warehouse':['Warehouse','Gudang'], 'Field':['Field','Lapangan'] }[d] || [d, d])[lang === 'id' ? 1 : 0];
 const tRole = (r) => ({ head_noc:['head noc','Kepala NOC'], osp:['osp','OSP'], noc:['noc','NOC'], cs:['cs','Layanan Pelanggan'], warehouse_manager:['warehouse manager','Manajer Gudang'], field_tech:['field tech','teknisi lapangan'] }[r] || [r, r])[lang === 'id' ? 1 : 0];
@@ -149,6 +149,7 @@ const tRoleDesc = (r) => ({
   field_tech: ['Field technician — assignee only, no login', 'Teknisi lapangan — hanya penanggung jawab, tanpa login'],
 }[r] || [r, r])[lang === 'id' ? 1 : 0];
 const tApprove = (r) => ({ head_noc:['Anything','Apa pun'], osp:['Own dropped tasks only','Hanya tugas yang dibuat sendiri'] }[r] || ['No','Tidak'])[lang === 'id' ? 1 : 0];
+const tStatus = (s) => ({ open:['open','Terbuka'], submitted:['submitted','Terkirim'], approved:['approved','Disetujui'], flagged:['flagged','Ditandai'] }[s] || [s, s])[lang === 'id' ? 1 : 0];
 function setLang(l) {
   if (l !== 'en' && l !== 'id') return;
   lang = l;
@@ -202,7 +203,7 @@ const canApproveTask = (t) => actor().role === 'head_noc' || (actor().role === '
 
 function toast(msg, ok = true) {
   const el = $('#toast'); el.textContent = msg; el.classList.remove('hidden');
-  el.style.background = ok ? '#12233a' : '#b42318';
+  el.classList.toggle('error', !ok);
   setTimeout(() => el.classList.add('hidden'), 3500);
 }
 async function api(path, method = 'GET', body) {
@@ -285,11 +286,11 @@ function renderOverview() {
       <div class="card"><div class="big">${onShift.length}</div><div class="label">${tr('on_shift_today')}</div></div>
       <div class="card ${attention.length ? 'warn' : ''}"><div class="big">${attention.length}</div><div class="label">${tr('needs_attention')}</div></div>
     </div>
-    <div class="panel"><h3>${tr('done_yesterday_h')}</h3>${doneY.length ? `<ul>${doneY.map((x) => `<li>${esc(x.title)} — ${esc(personName(x.assigneeId))}</li>`).join('')}</ul>` : '<p class="muted">${tr(\'nothing_done_yday\')}</p>'}</div>
-    <div class="panel"><h3>${tr('due_today_h')}</h3>${dueT.length ? `<ul>${dueT.map((x) => `<li><a href="#" data-open="${x.id}">${esc(x.title)}</a> — ${esc(personName(x.assigneeId))} · ${esc(x.location || '')}</li>`).join('')}</ul>` : '<p class="muted">${tr(\'nothing_due_today\')}</p>'}
+    <div class="panel"><h3>${tr('done_yesterday_h')}</h3>${doneY.length ? `<ul>${doneY.map((x) => `<li>${esc(x.title)} — ${esc(personName(x.assigneeId))}</li>`).join('')}</ul>` : `<p class="muted">${tr('nothing_done_yday')}</p>`}</div>
+    <div class="panel"><h3>${tr('due_today_h')}</h3>${dueT.length ? `<ul>${dueT.map((x) => `<li><a href="#" data-open="${x.id}">${esc(x.title)}</a> — ${esc(personName(x.assigneeId))} · ${esc(x.location || '')}</li>`).join('')}</ul>` : `<p class="muted">${tr('nothing_due_today')}</p>`}
     ${overdue.length ? `<h3>${tr('overdue_h')}</h3><ul>${overdue.map((x) => `<li>${esc(x.title)} — ${tr('due_prefix')} ${esc(x.dueDate)}</li>`).join('')}</ul>` : ''}</div>
-    <div class="panel"><h3>${tr('onboard_h')} (${t})</h3>${onShift.length ? `<ul>${onShift.map((s) => `<li>${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)} (${esc(tDept(s.department))})</li>`).join('')}</ul>` : '<p class="muted">${tr(\'no_shifts_today\')}</p>'}</div>
-    <div class="panel"><h3>${tr('mat_out_yday')}</h3>${matY ? `<table><tr><th>${tr('th_item')}</th><th>${tr('th_issued')}</th><th>${tr('th_used')}</th><th>${tr('th_returned')}</th><th>${tr('th_variance')}</th><th>${tr('th_where')}</th></tr>${matY.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}</table><p class="muted">${tr('status_label')}: ${esc(matY.status)}${matY.status === 'approved' ? ' ' + tr('by_label') + ' ' + esc(personName(matY.checkedById)) : ''}</p>` : '<p class="muted">${tr(\'no_mat_yday\')}</p>'}</div>`;
+    <div class="panel"><h3>${tr('onboard_h')} (${t})</h3>${onShift.length ? `<ul>${onShift.map((s) => `<li>${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)} (${esc(tDept(s.department))})</li>`).join('')}</ul>` : `<p class="muted">${tr('no_shifts_today')}</p>`}</div>
+    <div class="panel"><h3>${tr('mat_out_yday')}</h3>${matY ? `<table><tr><th>${tr('th_item')}</th><th>${tr('th_issued')}</th><th>${tr('th_used')}</th><th>${tr('th_returned')}</th><th>${tr('th_variance')}</th><th>${tr('th_where')}</th></tr>${matY.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}</table><p class="muted">${tr('status_label')}: ${esc(tStatus(matY.status))}${matY.status === 'approved' ? ' ' + tr('by_label') + ' ' + esc(personName(matY.checkedById)) : ''}</p>` : `<p class="muted">${tr('no_mat_yday')}</p>`}</div>`;
   bindOpenLinks();
 }
 
@@ -303,7 +304,7 @@ function taskCard(t) {
     <div class="m"><span class="pill ${t.priority === 'high' || t.priority === 'urgent' ? t.priority : ''}">${esc(tPri(t.priority))}</span>
     <span class="pill">${esc(tKind(t.taskKind))}</span>${t.dueDate ? `<span>${tr('due_prefix')} ${esc(t.dueDate)}</span>` : ''}</div>
     <div class="m">${esc(personName(t.assigneeId))} · ${esc(t.department || '')}</div>
-    ${ev ? `<div class="badge-cam">📷 ${ev} evidence</div>` : ''}
+    ${ev ? `<div class="badge-cam">📷 ${ev} ${lang === 'id' ? 'foto bukti' : 'evidence'}</div>` : ''}
     <div class="m"><select class="move-to" data-id="${t.id}"><option value="">${tr('move_to')}</option>${S.columns.map((c) => `<option value="${c.id}" ${c.id === col.id ? 'disabled' : ''}>${esc(tCol(c.name))}</option>`).join('')}</select></div>
   </div>`;
 }
@@ -315,7 +316,7 @@ function renderBoard() {
     return `<div class="column" data-col="${c.id}"><h3>${esc(tCol(c.name))} (${list.length})
       <span><button class="btn small" data-rename-col="${c.id}">✎</button>
       <button class="btn small" data-del-col="${c.id}">✕</button></span></h3>
-      ${list.map(taskCard).join('') || '<p class="muted">${tr(\'empty_col\')}</p>'}
+      ${list.map(taskCard).join('') || `<p class="muted">${tr('empty_col')}</p>`}
       ${isEntryColumn(c) ? `<button class="btn primary" data-add-task="${c.id}">${tr('new_task')}</button>` : ''}</div>`;
   }).join('');
   document.querySelectorAll('[data-add-task]').forEach((b) => b.addEventListener('click', (e) => {
@@ -351,7 +352,7 @@ async function moveTask(id, columnId) {
   const t = S.tasks.find((x) => x.id === id);
   const col = colById(columnId);
   if (col?.kind === 'done' && !canApproveTask(t)) {
-    toast(`Only a supervisor or admin can approve a task to Done. ${actor().role === 'osp' ? 'OSP can only approve tasks they dropped themselves.' : 'Head NOC can approve anything.'}`, false);
+    toast(lang === 'id' ? 'Hanya Head NOC (apa pun) atau OSP (tugas yang dibuatnya sendiri) yang bisa menyetujui tugas ke Selesai.' : 'Only Head NOC (anything) or OSP (own dropped tasks) can approve a task to Done.', false);
     return;
   }
   try { S = await api(`/api/tasks/${id}/move`, 'POST', { columnId }); toast(`“${t.title}” → ${tCol(col.name)}`); renderAll(); }
@@ -363,7 +364,7 @@ function renderTodo() {
   const groups = {};
   for (const t of S.tasks) { const k = personName(t.assigneeId); (groups[k] = groups[k] || []).push(t); }
   $('#view-todo').innerHTML = `<h2>${tr('todo_title')}</h2><p class="muted">${tr('todo_sub')}</p>` +
-    Object.entries(groups).map(([who, list]) => `<div class="panel"><h3>${esc(who)}</h3><ul>${list.map((t) => `<li><a href="#" data-open="${t.id}">${esc(t.title)}</a> — ${esc(colById(t.columnId)?.name || '')}${t.dueDate ? ` · due ${esc(t.dueDate)}` : ''} <span class="pill">${esc(t.priority)}</span></li>`).join('')}</ul></div>`).join('');
+    Object.entries(groups).map(([who, list]) => `<div class="panel"><h3>${esc(who)}</h3><ul>${list.map((t) => `<li><a href="#" data-open="${t.id}">${esc(t.title)}</a> — ${esc(colById(t.columnId)?.name || '')}${t.dueDate ? ` · ${tr('due_prefix')} ${esc(t.dueDate)}` : ''} <span class="pill ${t.priority === 'high' || t.priority === 'urgent' ? t.priority : ''}">${esc(tPri(t.priority))}</span></li>`).join('')}</ul></div>`).join('');
   bindOpenLinks();
 }
 function bindOpenLinks() {
@@ -398,7 +399,7 @@ function renderCalendar() {
       <p><a class="btn" href="/api/shifts/template.csv">${tr('download_template')}</a></p>
       <p><input type="file" id="csvFile" accept=".csv,text/csv"></p>
       <textarea id="csvPaste" rows="4" style="width:100%" placeholder="2026-11-08,Bima Prasetyo,Pagi,07:00,15:00,NOC,"></textarea>
-      <p><button class="btn primary" id="csvPreviewBtn">Preview import</button></p>
+      <p><button class="btn primary" id="csvPreviewBtn">${tr('preview_import')}</button></p>
       <div id="csvPreview"></div>
     </div>
     <div class="panel"><h3>${tr('onboard_pick')}</h3><p class="muted">${tr('click_day')}</p><div id="dayDetail"></div></div>`;
@@ -424,7 +425,7 @@ function renderCalendar() {
     const matched = rows.filter((r) => S.people.some((p) => p.name.toLowerCase() === (r.name || '').toLowerCase()));
     $('#csvPreview').innerHTML = `<table><tr><th>${tr('date_label')}</th><th>${tr('th_name')}</th><th>Shift</th><th>${lang === 'id' ? 'Cocok?' : 'Match'}</th></tr>${rows.map((r) => {
       const ok = S.people.some((p) => p.name.toLowerCase() === (r.name || '').toLowerCase());
-      return `<tr><td>${esc(r.date || '')}</td><td>${esc(r.name || '')}</td><td>${esc(r.shift || '')}</td><td>${ok ? '✓ matched' : '✗ no such person'}</td></tr>`;
+      return `<tr><td>${esc(r.date || '')}</td><td>${esc(r.name || '')}</td><td>${esc(r.shift || '')}</td><td>${ok ? tr('match_ok') : tr('match_no')}</td></tr>`;
     }).join('')}</table>
     <p>${matched.length} ${tr('matched')} / ${rows.length - matched.length} ${tr('no_such_person')}.</p>
     <p><button class="btn primary" id="csvImportBtn">${tr('import_rows')} ${rows.length}</button></p>`;
@@ -456,31 +457,31 @@ function renderMaterials() {
   ${days.map((d) => {
     const tot = d.lines.reduce((s, l) => ({ i: s.i + l.issuedQty, u: s.u + (l.usedQty || 0), r: s.r + (l.returnedQty || 0) }), { i: 0, u: 0, r: 0 });
     const variance = tot.i - tot.u - tot.r;
-    return `<div class="panel"><h3>${esc(d.date)} — ${tr('status_col')}: ${esc(d.status)}${d.status === 'approved' ? ` (${tr('checked_by')} ${esc(personName(d.checkedById))})` : ''}${d.status === 'flagged' ? ` — ${esc(d.checkNote)}` : ''}</h3>
+    return `<div class="panel"><h3>${esc(d.date)} — ${tr('status_col')}: ${esc(tStatus(d.status))}${d.status === 'approved' ? ` (${tr('checked_by')} ${esc(personName(d.checkedById))})` : ''}${d.status === 'flagged' ? ` — ${esc(d.checkNote)}` : ''}</h3>
     <table><tr><th>${tr('th_item')}</th><th>${tr('th_issued')}</th><th>${tr('th_used')}</th><th>${tr('th_returned')}</th><th>${tr('th_variance')}</th><th>${tr('th_where')}</th></tr>
     ${d.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}
     <tr><td><b>${tr('total')}</b></td><td><b>${tot.i}</b></td><td><b>${tot.u}</b></td><td><b>${tot.r}</b></td><td class="${variance ? 'var-bad' : 'var-ok'}"><b>${variance}</b></td><td></td></tr></table>
-    ${d.status === 'open' && a.role === 'cs' ? `<h4>${tr('log_used_h')}</h4>${d.lines.map((l) => `<div><label>${esc(l.name)} — ${tr('th_issued')} ${l.issuedQty} ${esc(l.unit)}</label>
+    ${d.status === 'open' && a.role === 'cs' ? `<h4>${tr('log_used_h')}</h4>${d.lines.map((l) => `<div class="mat-log-row"><label>${esc(l.name)} — ${tr('th_issued')} ${l.issuedQty} ${esc(l.unit)}</label>
       <input type="number" min="0" step="any" id="used-${l.id}" value="${l.usedQty ?? ''}" placeholder="${tr('th_used')}" style="width:90px">
       <input type="number" min="0" step="any" id="ret-${l.id}" value="${l.returnedQty ?? ''}" placeholder="${tr('th_returned')}" style="width:90px">
       <input type="text" id="note-${l.id}" value="${esc(l.note || '')}" placeholder="${tr('where_ph')}" style="width:260px">
       <button class="btn small" data-log-line="${l.id}" data-day="${d.id}">${tr('save_btn')}</button></div>`).join('')}
       <p><button class="btn primary" data-submit-day="${d.id}">${tr('submit_report')}</button></p>` : ''}
     ${d.status === 'open' && a.role === 'warehouse_manager' ? `<h4>${tr('issue_more_h')}</h4>
-      <div><input id="issue-name-${d.id}" list="matNames" placeholder="${tr('item_name_ph')}" style="width:200px"> <input id="issue-qty-${d.id}" type="number" min="0" step="any" placeholder="${tr('qty_ph')}" style="width:80px"> <input id="issue-unit-${d.id}" placeholder="${tr('unit_ph')}" value="pcs" style="width:70px">
-      <button class="btn" data-issue-day="${d.id}" data-date="${d.date}">${tr('issued_toast')}</button></div>
+      <div class="issue-row"><input id="issue-name-${d.id}" list="matNames" placeholder="${tr('item_name_ph')}" style="width:200px"> <input id="issue-qty-${d.id}" type="number" min="0" step="any" placeholder="${tr('qty_ph')}" style="width:80px"> <input id="issue-unit-${d.id}" placeholder="${tr('unit_ph')}" value="pcs" style="width:70px">
+      <button class="btn" data-issue-day="${d.id}" data-date="${d.date}">${tr('issue_btn')}</button></div>
       <datalist id="matNames">${S.materialNames.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>` : ''}
     ${d.status === 'submitted' && a.role === 'warehouse_manager' ? `<h4>${tr('check_h')}</h4>
       <p><button class="btn primary" data-check-day="${d.id}" data-decision="approved">${tr('approve_match')}</button>
       <button class="btn danger" data-check-day="${d.id}" data-decision="flagged">${tr('flag_mismatch')}</button></p>` : ''}
-    ${d.status === 'submitted' && a.role !== 'warehouse_manager' ? '<p class="muted">${tr(\'submitted_waiting\')}</p>' : ''}
+    ${d.status === 'submitted' && a.role !== 'warehouse_manager' ? `<p class="muted">${tr('submitted_waiting')}</p>` : ''}
     </div>`;
   }).join('')}
   <div class="panel"><h3>${tr('issue_new_day')}</h3>
     <p class="muted">${tr('issue_new_help')}</p>
     <label>${tr('date_label')} <input type="date" id="newDayDate" value="${todayStr()}"></label>
     <div id="issueLines"><div><input class="il-name" list="matNames" placeholder="${tr('item_name_ph')}"> <input class="il-qty" type="number" min="0" step="any" placeholder="${tr('qty_ph')}"> <input class="il-unit" placeholder="${tr('unit_ph')}" value="pcs"></div></div>
-    <p><button class="btn" id="addIssueLine">+ Add line</button> <button class="btn primary" id="submitIssue">Issue morning material</button></p>
+    <p><button class="btn" id="addIssueLine">${tr('add_line')}</button> <button class="btn primary" id="submitIssue">${tr('issue_morning')}</button></p>
   </div>`;
   document.querySelectorAll('[data-log-line]').forEach((b) => b.addEventListener('click', async () => {
     try { S = await api(`/api/material-days/${b.dataset.day}/log`, 'POST', { lineId: Number(b.dataset.logLine), usedQty: Number(document.getElementById('used-' + b.dataset.logLine).value), returnedQty: Number(document.getElementById('ret-' + b.dataset.logLine).value), note: document.getElementById('note-' + b.dataset.logLine).value }); toast(tr('logged')); renderAll(); }
@@ -555,19 +556,19 @@ function openTask(id) {
       : `<div class="warnbox"><b>⚠ ${tr('no_evidence_warn')}</b> ${tr('no_evidence_warn2')}</div>`) : ''}
     ${isReview ? `<p>${canAppr ? `<button class="btn primary" id="approveBtn">${tr('approve_done')}</button>` : `<button class="btn primary" disabled>${tr('approve_done')}</button>`}
     <button class="btn danger" id="rejectBtn" ${canAppr ? '' : 'disabled'}>${tr('reject_back')}</button>
-    ${!canAppr ? `<span class="muted">${actor().role === 'osp' ? 'OSP can only approve tasks they dropped themselves.' : 'Only Head NOC (anything) or OSP (own dropped tasks) can approve.'}</span>` : ''}</p>` : ''}
+    ${!canAppr ? `<span class="muted">${actor().role === 'osp' ? (lang === 'id' ? 'OSP hanya bisa menyetujui tugas yang dibuatnya sendiri.' : 'OSP can only approve tasks they dropped themselves.') : (lang === 'id' ? 'Hanya Head NOC (apa pun) atau OSP (tugas yang dibuatnya sendiri) yang bisa menyetujui.' : 'Only Head NOC (anything) or OSP (own dropped tasks) can approve.')}</span>` : ''}</p>` : ''}
     <p><label>${tr('move_to_label')} <select id="modalMove">${S.columns.map((c) => `<option value="${c.id}" ${c.id === col.id ? 'selected' : ''}>${esc(tCol(c.name))}</option>`).join('')}</select></label></p>
     <h3>${tr('evidence_photos')}</h3>
     <div class="gallery">${ev.map((f) => `<figure style="margin:0"><img src="/api/files/${f.id}" data-lightbox="${f.id}" data-cap="${esc(f.caption || f.name)}" alt="${esc(f.caption || 'evidence')}">
-      <figcaption class="muted">${esc(f.caption || f.name)} · ${esc(personName(f.createdById))} · ${new Date(f.createdAt).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-GB')}</figcaption></figure>`).join('') || '<p class="muted">${tr(\'no_evidence\')}</p>'}</div>
+      <figcaption class="muted">${esc(f.caption || f.name)} · ${esc(personName(f.createdById))} · ${new Date(f.createdAt).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-GB')}</figcaption></figure>`).join('') || `<p class="muted">${tr('no_evidence')}</p>`}</div>
     <div class="chip-row" id="capChips">${(lang === 'id' ? ['ONT terpasang', 'Hasil speedtest', 'Sebelum/Sesudah', 'ODP terpasang', 'Kabel ditarik'] : ['ONT installed', 'Speedtest result', 'Before/After', 'ODP installed', 'Cable pulled']).map((c) => `<button type="button" data-cap="${c}">${c}</button>`).join('')}</div>
     <p><input type="file" id="evInput" accept="image/*" multiple> <span class="muted">${tr('caption_label')} <b id="capLabel">${tr('caption_blank')}</b> ${tr('caption_hint')}</span></p>
     <h3>${tr('mat_adhoc')}</h3>
-    <ul>${t.materials.map((m) => `<li>${esc(m.name)} — ${m.qty} ${esc(m.unit)}${m.serial ? ` · SN ${esc(m.serial)}` : ''} (${esc(m.direction)})${m.note ? ` · ${esc(m.note)}` : ''}</li>`).join('') || '<li class="muted">${tr(\'no_mat_task\')}</li>'}</ul>
-    <p><input id="matName" list="matNames2" placeholder="${tr('item_name_ph')}" style="width:180px"> <input id="matQty" type="number" min="0" step="any" placeholder="${tr('qty_ph')}" style="width:80px"> <input id="matUnit" placeholder="${tr('unit_ph')}" value="pcs" style="width:70px"> <input id="matSerial" placeholder="${tr('serial_ph')}" style="width:150px"> <input id="matNote" placeholder="${tr('where_task_ph')}" style="width:220px"> <button class="btn" id="addMatBtn">${tr('add_material')}</button></p>
+    <ul>${t.materials.map((m) => `<li>${esc(m.name)} — ${m.qty} ${esc(m.unit)}${m.serial ? ` · SN ${esc(m.serial)}` : ''} (${esc(m.direction)})${m.note ? ` · ${esc(m.note)}` : ''}</li>`).join('') || `<li class="muted">${tr('no_mat_task')}</li>`}</ul>
+    <p class="adhoc-row"><input id="matName" list="matNames2" placeholder="${tr('item_name_ph')}" style="width:180px"> <input id="matQty" type="number" min="0" step="any" placeholder="${tr('qty_ph')}" style="width:80px"> <input id="matUnit" placeholder="${tr('unit_ph')}" value="pcs" style="width:70px"> <input id="matSerial" placeholder="${tr('serial_ph')}" style="width:150px"> <input id="matNote" placeholder="${tr('where_task_ph')}" style="width:220px"> <button class="btn" id="addMatBtn">${tr('add_material')}</button></p>
     <datalist id="matNames2">${S.materialNames.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>
     <h3>${tr('files_h')}</h3>
-    <ul>${files.map((f) => `<li><a href="/api/files/${f.id}" target="_blank">${esc(f.name)}</a> <button class="btn small" data-del-file="${f.id}">✕</button></li>`).join('') || '<li class="muted">${tr(\'no_files\')}</li>'}</ul>
+    <ul>${files.map((f) => `<li><a href="/api/files/${f.id}" target="_blank">${esc(f.name)}</a> <button class="btn small" data-del-file="${f.id}">✕</button></li>`).join('') || `<li class="muted">${tr('no_files')}</li>`}</ul>
     <p><input type="file" id="fileInput"> <button class="btn" id="uploadFileBtn">${tr('attach_file')}</button></p>
     <p><button class="btn danger" id="deleteTaskBtn">${tr('delete_task')}</button></p>`;
   $('#taskModal').classList.remove('hidden');
