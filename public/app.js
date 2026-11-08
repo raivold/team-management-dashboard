@@ -2,6 +2,166 @@
 // server-side; the UI only reflects what the acting user is allowed to do.
 let S = null;
 let actorId = Number(localStorage.getItem('actorId') || 1);
+// ---- i18n: EN / ID. Default English; toggle persisted in localStorage.
+// Proper names, ticket/customer/material names are never translated.
+let lang = 'en';
+try { const _l = localStorage.getItem('tmd-lang'); if (_l === 'en' || _l === 'id') lang = _l; } catch { /* storage blocked: stay English */ }
+const I18N = {
+en: {
+  nav_overview:'Overview', nav_board:'Kanban', nav_todo:'To-Do', nav_calendar:'Calendar', nav_materials:'Materials', nav_team:'Team', nav_activity:'Activity',
+  acting_as:'Acting as', demo_badge:'Prototype · demo data',
+  subtitle:'PT Sakti Wijaya Network · NOC / OSP / Customer Service / Warehouse',
+  overview_title:'Yesterday → Today', overview_sub:'What finished yesterday, what is due today, what material went out, who is on board.',
+  done_yesterday:'Done yesterday', due_today:'Due today', overdue:'Overdue', mat_used_yday:'Material used yesterday (units)',
+  on_shift_today:'On shift today', needs_attention:'Needs attention (Pending Approval)',
+  done_yesterday_h:'Done yesterday', due_today_h:'Due today', overdue_h:'Overdue', onboard_h:'Who is on board today',
+  mat_out_yday:'Material out yesterday', nothing_done_yday:'Nothing completed yesterday.', nothing_due_today:'Nothing due today.',
+  no_shifts_today:'${t(\'no_shifts_today\')}', no_mat_yday:'${t(\'no_mat_yday\')}',
+  status_label:'Status', by_label:'by',
+  new_task:'+ New task', add_column:'+ Add column', filter_ph:'Filter by city, customer, technician…',
+  empty_col:'Empty', move_to:'Move to…',
+  todo_title:'To-Do list', todo_sub:'Same tasks as the Kanban, grouped by assignee. Field technicians appear as assignees only — they have no login.',
+  cal_title:'Calendar', prev:'‹ Prev', next:'Next ›', today_btn:'Today',
+  shift_import:'Shift import', shift_import_help:'Upload a CSV (or paste it below) with columns Date | Name | Shift | Start | End | Department | Notes. Names are matched to people; re-importing the same person + date replaces the old shift instead of duplicating it.',
+  download_template:'Download CSV template', preview_import:'Preview import', import_rows:'Import',
+  matched:'matched', no_such_person:'no such person', match_ok:'✓ matched', match_no:'✗ no such person',
+  nothing_to_import:'Nothing to import — paste CSV first.',
+  onboard_pick:'Who is on board — pick a day', click_day:'Click any day above to see its shifts here.',
+  on_shift:'On shift', tasks_due:'Tasks due', nobody:'nobody recorded', none:'none',
+  mat_title:'Materials — daily cycle',
+  mat_help:'Morning: Warehouse issues everything that might be used that day. During the day: CS logs used / returned and submits the report. Next day: Warehouse checks it against issued data and approves or flags it. Issued − (used + returned) = variance; anything other than 0 is highlighted.',
+  th_item:'Item', th_issued:'Issued', th_used:'Used', th_returned:'Returned', th_variance:'Variance', th_where:'Where it went',
+  total:'Total', status_col:'status',
+  log_used_h:'Log used / returned (Customer Service)', issue_more_h:'Issue more material (Warehouse Manager)',
+  check_h:'Check this report (Warehouse Manager)', approve_match:'Approve — matches my data', flag_mismatch:'Flag mismatch',
+  submitted_waiting:'Submitted — awaiting Warehouse check (next day).',
+  issue_new_day:'Issue morning material for a new day (Warehouse Manager)',
+  issue_new_help:'Pick a date and list everything that might be used. This creates that day\'s issue list.',
+  add_line:'+ Add line', issue_morning:'Issue morning material',
+  date_label:'Date', item_name_ph:'Item name', qty_ph:'Qty', unit_ph:'Unit',
+  where_ph:'Where did it go? e.g. Install Ibu Ratna, Binong',
+  save_btn:'Save', submit_report:'Submit daily report',
+  team_title:'Team', team_sub:'One account per person, grouped by department. Field technicians have no account — they are assignees only, and NOC updates their work.',
+  th_name:'Name', th_role:'Role', th_can_approve:'Can approve?',
+  activity_title:'Activity log',
+  evidence_photos:'Evidence photos', no_evidence:'No evidence photos yet.',
+  evidence_attached:'Evidence attached', evidence_review:'photo(s) — review below before approving.',
+  no_evidence_warn:'No evidence photos.', no_evidence_warn2:'This task was sent for approval with no proof. Ask for photos before approving.',
+  approve_done:'Approve → Done', reject_back:'Reject back',
+  move_to_label:'Move to', mat_adhoc:'Material (ad-hoc, per task)', no_mat_task:'No material logged on this task.',
+  add_material:'Add material', files_h:'Files', no_files:'No files.', attach_file:'Attach file', delete_task:'Delete task',
+  caption_label:'Caption:', caption_blank:'—', caption_hint:'(tap a chip above, or leave blank)',
+  serial_ph:'Serial (optional)', where_task_ph:'Where did it go? (optional)',
+  new_task_title:'New task', title_label:'Title', kind_label:'Kind', dept_label:'Department', priority_label:'Priority',
+  assign_label:'Assign to (field techs are assignees only)', due_label:'Due date', customer_label:'Customer',
+  location_label:'Location', service_label:'Service ID', desc_label:'Description', create_task:'Create task',
+  unassigned:'— unassigned —', staff_group:'Staff', field_group:'Field tech (no login)',
+  rename_col:'Rename column:', del_col_confirm:'Delete this column? Its tasks move to the first column.',
+  new_col_name:'New column name:', del_file_confirm:'Delete this file?', del_task_confirm:'Delete this task?',
+  reject_reason:'Rejection reason:', flag_prompt:'What does not match?',
+  pick_file:'Pick a file first.', title_required:'Title is required.', mat_required:'Material name and qty > 0 are required.',
+  add_line_required:'Add at least one line with a name and qty.',
+  logged:'Logged.', submitted_toast:'Daily report submitted — awaiting Warehouse check.', issued_toast:'Issued.',
+  morning_issued:'Morning material issued.', task_created:'Task created.', task_deleted:'Task deleted.',
+  evidence_added:'Evidence photo(s) added.', file_attached:'File attached.', material_added:'Material added.',
+  approved_toast:'Approved → Done.', rejected_toast:'Rejected back to In Progress.',
+  import_done:'Import done', created_w:'created', replaced_w:'replaced', skipped_w:'skipped',
+  due_prefix:'Due', priority_word:'Priority', customer_word:'Customer', dropped_by:'Dropped by', assigned_to:'Assigned to',
+  checked_by:'checked by', failed_load:'Failed to load: ',
+},
+id: {
+  nav_overview:'Ringkasan', nav_board:'Kanban', nav_todo:'Daftar Tugas', nav_calendar:'Kalender', nav_materials:'Material', nav_team:'Tim', nav_activity:'Aktivitas',
+  acting_as:'Bertindak sebagai', demo_badge:'Prototipe · data demo',
+  subtitle:'PT Sakti Wijaya Network · NOC / OSP / Layanan Pelanggan / Gudang',
+  overview_title:'Kemarin → Hari Ini', overview_sub:'Apa yang selesai kemarin, apa yang harus selesai hari ini, material apa yang keluar, siapa yang bertugas.',
+  done_yesterday:'Selesai kemarin', due_today:'Jatuh tempo hari ini', overdue:'Terlambat', mat_used_yday:'Material terpakai kemarin (unit)',
+  on_shift_today:'Bertugas hari ini', needs_attention:'Perlu perhatian (Menunggu Persetujuan)',
+  done_yesterday_h:'Selesai kemarin', due_today_h:'Jatuh tempo hari ini', overdue_h:'Terlambat', onboard_h:'Siapa yang bertugas hari ini',
+  mat_out_yday:'Material keluar kemarin', nothing_done_yday:'Tidak ada yang selesai kemarin.', nothing_due_today:'Tidak ada yang jatuh tempo hari ini.',
+  no_shifts_today:'Tidak ada shift tercatat hari ini — impor file shift.', no_mat_yday:'Tidak ada catatan material untuk kemarin.',
+  status_label:'Status', by_label:'oleh',
+  new_task:'+ Tugas baru', add_column:'+ Tambah kolom', filter_ph:'Filter berdasarkan kota, pelanggan, teknisi…',
+  empty_col:'Kosong', move_to:'Pindah ke…',
+  todo_title:'Daftar Tugas', todo_sub:'Tugas yang sama dengan Kanban, dikelompokkan berdasarkan penanggung jawab. Teknisi lapangan hanya muncul sebagai penanggung jawab — mereka tidak punya login.',
+  cal_title:'Kalender', prev:'‹ Sebelumnya', next:'Berikutnya ›', today_btn:'Hari ini',
+  shift_import:'Impor shift', shift_import_help:'Unggah CSV (atau tempel di bawah) dengan kolom Date | Name | Shift | Start | End | Department | Notes. Nama dicocokkan dengan anggota tim; mengimpor ulang orang + tanggal yang sama akan mengganti shift lama, bukan menduplikasinya.',
+  download_template:'Unduh template CSV', preview_import:'Pratinjau impor', import_rows:'Impor',
+  matched:'cocok', no_such_person:'tidak ada orang tersebut', match_ok:'✓ cocok', match_no:'✗ tidak ada orang tersebut',
+  nothing_to_import:'Tidak ada yang diimpor — tempel CSV dulu.',
+  onboard_pick:'Siapa yang bertugas — pilih tanggal', click_day:'Klik salah satu tanggal di atas untuk melihat shift-nya di sini.',
+  on_shift:'Bertugas', tasks_due:'Tugas jatuh tempo', nobody:'tidak ada yang tercatat', none:'tidak ada',
+  mat_title:'Material — siklus harian',
+  mat_help:'Pagi: Gudang mengeluarkan semua material yang mungkin dipakai hari itu. Siang hari: CS mencatat yang terpakai / dikembalikan lalu mengirim laporan. Hari berikutnya: Gudang memeriksa dengan data pengeluaran dan menyetujui atau menandainya. Dikeluarkan − (terpakai + dikembalikan) = selisih; selain 0 akan disorot.',
+  th_item:'Barang', th_issued:'Dikeluarkan', th_used:'Terpakai', th_returned:'Dikembalikan', th_variance:'Selisih', th_where:'Dipakai untuk',
+  total:'Total', status_col:'status',
+  log_used_h:'Catat terpakai / dikembalikan (Customer Service)', issue_more_h:'Keluarkan material lagi (Warehouse Manager)',
+  check_h:'Periksa laporan ini (Warehouse Manager)', approve_match:'Setujui — sesuai data saya', flag_mismatch:'Tandai tidak cocok',
+  submitted_waiting:'Sudah dikirim — menunggu pemeriksaan Gudang (hari berikutnya).',
+  issue_new_day:'Keluarkan material pagi untuk hari baru (Warehouse Manager)',
+  issue_new_help:'Pilih tanggal dan daftarkan semua yang mungkin dipakai. Ini membuat daftar pengeluaran hari itu.',
+  add_line:'+ Tambah baris', issue_morning:'Keluarkan material pagi',
+  date_label:'Tanggal', item_name_ph:'Nama barang', qty_ph:'Jml', unit_ph:'Satuan',
+  where_ph:'Dipakai untuk apa? mis. Install Ibu Ratna, Binong',
+  save_btn:'Simpan', submit_report:'Kirim laporan harian',
+  team_title:'Tim', team_sub:'Satu akun per orang, dikelompokkan berdasarkan departemen. Teknisi lapangan tidak punya akun — mereka hanya penanggung jawab, dan NOC yang memperbarui pekerjaannya.',
+  th_name:'Nama', th_role:'Peran', th_can_approve:'Bisa menyetujui?',
+  activity_title:'Log Aktivitas',
+  evidence_photos:'Foto bukti', no_evidence:'Belum ada foto bukti.',
+  evidence_attached:'Bukti terlampir', evidence_review:'foto — periksa di bawah sebelum menyetujui.',
+  no_evidence_warn:'Tidak ada foto bukti.', no_evidence_warn2:'Tugas ini dikirim untuk persetujuan tanpa bukti. Minta foto sebelum menyetujui.',
+  approve_done:'Setujui → Selesai', reject_back:'Kembalikan',
+  move_to_label:'Pindah ke', mat_adhoc:'Material (dadakan, per tugas)', no_mat_task:'Belum ada material yang dicatat pada tugas ini.',
+  add_material:'Tambah material', files_h:'File', no_files:'Tidak ada file.', attach_file:'Lampirkan file', delete_task:'Hapus tugas',
+  caption_label:'Keterangan:', caption_blank:'—', caption_hint:'(ketuk salah satu di atas, atau kosongkan)',
+  serial_ph:'Serial (opsional)', where_task_ph:'Dipakai untuk apa? (opsional)',
+  new_task_title:'Tugas baru', title_label:'Judul', kind_label:'Jenis', dept_label:'Departemen', priority_label:'Prioritas',
+  assign_label:'Tugaskan ke (teknisi lapangan hanya penanggung jawab)', due_label:'Tanggal jatuh tempo', customer_label:'Pelanggan',
+  location_label:'Lokasi', service_label:'ID Layanan', desc_label:'Deskripsi', create_task:'Buat tugas',
+  unassigned:'— belum ditugaskan —', staff_group:'Staf', field_group:'Teknisi lapangan (tanpa login)',
+  rename_col:'Ganti nama kolom:', del_col_confirm:'Hapus kolom ini? Tugasnya pindah ke kolom pertama.',
+  new_col_name:'Nama kolom baru:', del_file_confirm:'Hapus file ini?', del_task_confirm:'Hapus tugas ini?',
+  reject_reason:'Alasan penolakan:', flag_prompt:'Apa yang tidak cocok?',
+  pick_file:'Pilih file dulu.', title_required:'Judul wajib diisi.', mat_required:'Nama material dan jumlah > 0 wajib diisi.',
+  add_line_required:'Tambahkan minimal satu baris dengan nama dan jumlah.',
+  logged:'Tercatat.', submitted_toast:'Laporan harian terkirim — menunggu pemeriksaan Gudang.', issued_toast:'Dikeluarkan.',
+  morning_issued:'Material pagi dikeluarkan.', task_created:'Tugas dibuat.', task_deleted:'Tugas dihapus.',
+  evidence_added:'Foto bukti ditambahkan.', file_attached:'File dilampirkan.', material_added:'Material ditambahkan.',
+  approved_toast:'Disetujui → Selesai.', rejected_toast:'Dikembalikan ke Sedang Dikerjakan.',
+  import_done:'Impor selesai', created_w:'dibuat', replaced_w:'diganti', skipped_w:'dilewati',
+  due_prefix:'Jatuh tempo', priority_word:'Prioritas', customer_word:'Pelanggan', dropped_by:'Dibuat oleh', assigned_to:'Ditugaskan ke',
+  checked_by:'diperiksa oleh', failed_load:'Gagal memuat: ',
+}};
+const t = (k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
+const COL_NAMES = { 'Backlog':['Backlog','Backlog'], 'To Do':['To Do','Yang Harus Dikerjakan'], 'In Progress':['In Progress','Sedang Dikerjakan'], 'Waiting':['Waiting','Menunggu'], 'Pending Approval':['Pending Approval','Menunggu Persetujuan'], 'Done':['Done','Selesai'] };
+const tCol = (name) => (COL_NAMES[name] ? COL_NAMES[name][lang === 'id' ? 1 : 0] : name);
+const tPri = (p) => ({ normal:['normal','Normal'], high:['high','Tinggi'], urgent:['urgent','Mendesak'] }[p] || [p, p])[lang === 'id' ? 1 : 0];
+const tKind = (k) => ({ ticket:['Ticket','Tiket'], project:['Project','Proyek'], maintenance:['Maintenance','Pemeliharaan'], handover:['Handover','Serah Terima'], reminder:['Reminder','Pengingat'] }[k] || [k, k])[lang === 'id' ? 1 : 0];
+const tDept = (d) => ({ 'Head NOC':['Head NOC','Kepala NOC'], 'Customer Service':['Customer Service','Layanan Pelanggan'], 'Warehouse':['Warehouse','Gudang'], 'Field':['Field','Lapangan'] }[d] || [d, d])[lang === 'id' ? 1 : 0];
+const tRole = (r) => ({ head_noc:['head noc','Kepala NOC'], osp:['osp','OSP'], noc:['noc','NOC'], cs:['cs','Layanan Pelanggan'], warehouse_manager:['warehouse manager','Manajer Gudang'], field_tech:['field tech','teknisi lapangan'] }[r] || [r, r])[lang === 'id' ? 1 : 0];
+const tRoleDesc = (r) => ({
+  head_noc: ['Head NOC — approves anything', 'Kepala NOC — menyetujui apa pun'],
+  osp: ['OSP — drops projects, approves only own dropped tasks', 'OSP — membuat proyek, hanya menyetujui tugas yang dibuatnya sendiri'],
+  noc: ['NOC — monitors, assigns, creates handover / reminder tasks', 'NOC — memantau, menugaskan, membuat tugas serah terima / pengingat'],
+  cs: ['Customer Service — logs daily material', 'Layanan Pelanggan — mencatat material harian'],
+  warehouse_manager: ['Warehouse Manager — issues + checks material', 'Manajer Gudang — mengeluarkan + memeriksa material'],
+  field_tech: ['Field technician — assignee only, no login', 'Teknisi lapangan — hanya penanggung jawab, tanpa login'],
+}[r] || [r, r])[lang === 'id' ? 1 : 0];
+const tApprove = (r) => ({ head_noc:['Anything','Apa pun'], osp:['Own dropped tasks only','Hanya tugas yang dibuat sendiri'] }[r] || ['No','Tidak'])[lang === 'id' ? 1 : 0];
+function setLang(l) {
+  if (l !== 'en' && l !== 'id') return;
+  lang = l;
+  try { localStorage.setItem('tmd-lang', l); } catch {}
+  document.documentElement.lang = l === 'id' ? 'id' : 'en';
+  document.querySelectorAll('#nav button').forEach((b) => { b.textContent = t('nav_' + b.dataset.view); });
+  const sub = document.querySelector('.topbar .sub'); if (sub) sub.textContent = t('subtitle');
+  const al = document.querySelector('label[for="actorSelect"]'); if (al) al.textContent = t('acting_as');
+  const db = document.querySelector('.demo-badge'); if (db) db.textContent = t('demo_badge');
+  const be = document.getElementById('langEn'); if (be) be.classList.toggle('active', l === 'en');
+  const bi = document.getElementById('langId'); if (bi) bi.classList.toggle('active', l === 'id');
+  applyStaticText();
+  renderActor(); applyStaticText(); applyRoleVisibility(); renderAll();
+}
+
 let currentView = 'overview';
 let calCursor = new Date();
 const $ = (s) => document.querySelector(s);
@@ -32,6 +192,15 @@ const isWM = () => actor().role === 'warehouse_manager';
 // Warehouse Manager sees Materials only: hide every other nav item and
 // force Materials as the landing view. The server enforces this too —
 // this only reflects it in the UI.
+function applyStaticText() {
+  document.querySelectorAll('#nav button').forEach((b) => { b.textContent = t('nav_' + b.dataset.view); });
+  const nb = document.getElementById('newTaskBtn'); if (nb) nb.textContent = t('new_task');
+  const ab = document.getElementById('addColBtn'); if (ab) ab.textContent = t('add_column');
+  const bf = document.getElementById('boardFilter'); if (bf) bf.placeholder = t('filter_ph');
+  const sub = document.querySelector('.topbar .sub'); if (sub) sub.textContent = t('subtitle');
+  const al = document.querySelector('label[for="actorSelect"]'); if (al) al.textContent = t('acting_as');
+  const db = document.querySelector('.demo-badge'); if (db) db.textContent = t('demo_badge');
+}
 function applyRoleVisibility() {
   const wm = isWM();
   document.querySelectorAll('#nav button').forEach((b) => {
@@ -43,14 +212,14 @@ function applyRoleVisibility() {
 }
 async function refresh() {
   S = await (await fetch('/api/state?actorId=' + actorId)).json();
-  renderActor(); applyRoleVisibility(); renderAll();
+  renderActor(); applyStaticText(); applyRoleVisibility(); renderAll();
 }
 function renderActor() {
   const sel = $('#actorSelect');
   sel.innerHTML = S.people.filter((p) => p.active && p.role !== 'field_tech')
-    .map((p) => `<option value="${p.id}" ${p.id === actorId ? 'selected' : ''}>${esc(p.name)} — ${esc(p.department)}</option>`).join('');
+    .map((p) => `<option value="${p.id}" ${p.id === actorId ? 'selected' : ''}>${esc(p.name)} — ${esc(tDept(p.department))}</option>`).join('');
   const a = actor();
-  $('#actorRole').textContent = `${a.department} · ${a.role.replace(/_/g, ' ')}`;
+  $('#actorRole').textContent = `${tDept(a.department)} · ${tRole(a.role)}`;
 }
 function switchView(v) {
   if (isWM()) v = 'materials';
@@ -82,21 +251,21 @@ function renderOverview() {
   const onShift = S.shifts.filter((s) => s.date === t);
   const attention = S.tasks.filter((x) => colById(x.columnId)?.kind === 'review');
   $('#view-overview').innerHTML = `
-    <h2>Yesterday → Today</h2>
-    <p class="muted">${y} → ${t} · What finished yesterday, what is due today, what material went out, who is on board.</p>
+    <h2>${t('overview_title')}</h2>
+    <p class="muted">${y} → ${t} · ${t('overview_sub')}</p>
     <div class="cards">
-      <div class="card ok"><div class="big">${doneY.length}</div><div class="label">Done yesterday</div></div>
-      <div class="card"><div class="big">${dueT.length}</div><div class="label">Due today</div></div>
-      <div class="card ${overdue.length ? 'warn' : ''}"><div class="big">${overdue.length}</div><div class="label">Overdue</div></div>
-      <div class="card"><div class="big">${usedY}</div><div class="label">Material used yesterday (units)</div></div>
-      <div class="card"><div class="big">${onShift.length}</div><div class="label">On shift today</div></div>
-      <div class="card ${attention.length ? 'warn' : ''}"><div class="big">${attention.length}</div><div class="label">Needs attention (Pending Approval)</div></div>
+      <div class="card ok"><div class="big">${doneY.length}</div><div class="label">${t('done_yesterday')}</div></div>
+      <div class="card"><div class="big">${dueT.length}</div><div class="label">${t('due_today')}</div></div>
+      <div class="card ${overdue.length ? 'warn' : ''}"><div class="big">${overdue.length}</div><div class="label">${t('overdue')}</div></div>
+      <div class="card"><div class="big">${usedY}</div><div class="label">${t('mat_used_yday')}</div></div>
+      <div class="card"><div class="big">${onShift.length}</div><div class="label">${t('on_shift_today')}</div></div>
+      <div class="card ${attention.length ? 'warn' : ''}"><div class="big">${attention.length}</div><div class="label">${t('needs_attention')}</div></div>
     </div>
-    <div class="panel"><h3>Done yesterday</h3>${doneY.length ? `<ul>${doneY.map((x) => `<li>${esc(x.title)} — ${esc(personName(x.assigneeId))}</li>`).join('')}</ul>` : '<p class="muted">Nothing completed yesterday.</p>'}</div>
-    <div class="panel"><h3>Due today</h3>${dueT.length ? `<ul>${dueT.map((x) => `<li><a href="#" data-open="${x.id}">${esc(x.title)}</a> — ${esc(personName(x.assigneeId))} · ${esc(x.location || '')}</li>`).join('')}</ul>` : '<p class="muted">Nothing due today.</p>'}
-    ${overdue.length ? `<h3>Overdue</h3><ul>${overdue.map((x) => `<li>${esc(x.title)} — due ${esc(x.dueDate)}</li>`).join('')}</ul>` : ''}</div>
-    <div class="panel"><h3>Who is on board today (${t})</h3>${onShift.length ? `<ul>${onShift.map((s) => `<li>${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)} (${esc(s.department)})</li>`).join('')}</ul>` : '<p class="muted">No shifts recorded for today — import the shift sheet.</p>'}</div>
-    <div class="panel"><h3>Material out yesterday</h3>${matY ? `<table><tr><th>Item</th><th>Issued</th><th>Used</th><th>Returned</th><th>Variance</th><th>Where it went</th></tr>${matY.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}</table><p class="muted">Status: ${esc(matY.status)}${matY.status === 'approved' ? ' by ' + esc(personName(matY.checkedById)) : ''}</p>` : '<p class="muted">No material day recorded for yesterday.</p>'}</div>`;
+    <div class="panel"><h3>${t('done_yesterday_h')}</h3>${doneY.length ? `<ul>${doneY.map((x) => `<li>${esc(x.title)} — ${esc(personName(x.assigneeId))}</li>`).join('')}</ul>` : '<p class="muted">${t(\'nothing_done_yday\')}</p>'}</div>
+    <div class="panel"><h3>${t('due_today_h')}</h3>${dueT.length ? `<ul>${dueT.map((x) => `<li><a href="#" data-open="${x.id}">${esc(x.title)}</a> — ${esc(personName(x.assigneeId))} · ${esc(x.location || '')}</li>`).join('')}</ul>` : '<p class="muted">${t(\'nothing_due_today\')}</p>'}
+    ${overdue.length ? `<h3>${t('overdue_h')}</h3><ul>${overdue.map((x) => `<li>${esc(x.title)} — ${t('due_prefix')} ${esc(x.dueDate)}</li>`).join('')}</ul>` : ''}</div>
+    <div class="panel"><h3>${t('onboard_h')} (${t})</h3>${onShift.length ? `<ul>${onShift.map((s) => `<li>${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)} (${esc(tDept(s.department))})</li>`).join('')}</ul>` : '<p class="muted">${t(\'no_shifts_today\')}</p>'}</div>
+    <div class="panel"><h3>${t('mat_out_yday')}</h3>${matY ? `<table><tr><th>${t('th_item')}</th><th>${t('th_issued')}</th><th>${t('th_used')}</th><th>${t('th_returned')}</th><th>${t('th_variance')}</th><th>${t('th_where')}</th></tr>${matY.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}</table><p class="muted">${t('status_label')}: ${esc(matY.status)}${matY.status === 'approved' ? ' ' + t('by_label') + ' ' + esc(personName(matY.checkedById)) : ''}</p>` : '<p class="muted">${t(\'no_mat_yday\')}</p>'}</div>`;
   bindOpenLinks();
 }
 
@@ -107,11 +276,11 @@ function taskCard(t) {
   return `<div class="task" draggable="true" data-id="${t.id}" data-open="${t.id}">
     <div class="t">${esc(t.title)}</div>
     <div class="m">${esc(t.customer || t.location || '')}</div>
-    <div class="m"><span class="pill ${t.priority === 'high' || t.priority === 'urgent' ? t.priority : ''}">${esc(t.priority)}</span>
-    <span class="pill">${esc(t.taskKind)}</span>${t.dueDate ? `<span>Due ${esc(t.dueDate)}</span>` : ''}</div>
+    <div class="m"><span class="pill ${t.priority === 'high' || t.priority === 'urgent' ? t.priority : ''}">${esc(tPri(t.priority))}</span>
+    <span class="pill">${esc(tKind(t.taskKind))}</span>${t.dueDate ? `<span>${t('due_prefix')} ${esc(t.dueDate)}</span>` : ''}</div>
     <div class="m">${esc(personName(t.assigneeId))} · ${esc(t.department || '')}</div>
     ${ev ? `<div class="badge-cam">📷 ${ev} evidence</div>` : ''}
-    <div class="m"><select class="move-to" data-id="${t.id}"><option value="">Move to…</option>${S.columns.map((c) => `<option value="${c.id}" ${c.id === col.id ? 'disabled' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+    <div class="m"><select class="move-to" data-id="${t.id}"><option value="">${t('move_to')}</option>${S.columns.map((c) => `<option value="${c.id}" ${c.id === col.id ? 'disabled' : ''}>${esc(tCol(c.name))}</option>`).join('')}</select></div>
   </div>`;
 }
 function renderBoard() {
@@ -119,10 +288,10 @@ function renderBoard() {
   const tasks = S.tasks.filter((t) => !q || [t.title, t.customer, t.location, personName(t.assigneeId)].join(' ').toLowerCase().includes(q));
   $('#board').innerHTML = S.columns.map((c) => {
     const list = tasks.filter((t) => t.columnId === c.id);
-    return `<div class="column" data-col="${c.id}"><h3>${esc(c.name)} (${list.length})
+    return `<div class="column" data-col="${c.id}"><h3>${esc(tCol(c.name))} (${list.length})
       <span><button class="btn small" data-rename-col="${c.id}">✎</button>
       <button class="btn small" data-del-col="${c.id}">✕</button></span></h3>
-      ${list.map(taskCard).join('') || '<p class="muted">Empty</p>'}</div>`;
+      ${list.map(taskCard).join('') || '<p class="muted">${t(\'empty_col\')}</p>'}</div>`;
   }).join('');
   document.querySelectorAll('.task').forEach((el) => {
     el.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', el.dataset.id));
@@ -140,12 +309,12 @@ function renderBoard() {
   }));
   document.querySelectorAll('[data-rename-col]').forEach((b) => b.addEventListener('click', async (e) => {
     e.stopPropagation();
-    const name = prompt('Rename column:', colById(Number(b.dataset.renameCol)).name);
+    const name = prompt(t('rename_col'), colById(Number(b.dataset.renameCol)).name);
     if (name) { try { S = await api(`/api/columns/${b.dataset.renameCol}`, 'PATCH', { name }); renderAll(); } catch (err) { toast(err.message, false); } }
   }));
   document.querySelectorAll('[data-del-col]').forEach((b) => b.addEventListener('click', async (e) => {
     e.stopPropagation();
-    if (!confirm('Delete this column? Its tasks move to the first column.')) return;
+    if (!confirm(t('del_col_confirm'))) return;
     try { S = await api(`/api/columns/${b.dataset.delCol}`, 'DELETE', {}); renderAll(); } catch (err) { toast(err.message, false); }
   }));
   bindOpenLinks();
@@ -157,7 +326,7 @@ async function moveTask(id, columnId) {
     toast(`Only a supervisor or admin can approve a task to Done. ${actor().role === 'osp' ? 'OSP can only approve tasks they dropped themselves.' : 'Head NOC can approve anything.'}`, false);
     return;
   }
-  try { S = await api(`/api/tasks/${id}/move`, 'POST', { columnId }); toast(`“${t.title}” → ${col.name}`); renderAll(); }
+  try { S = await api(`/api/tasks/${id}/move`, 'POST', { columnId }); toast(`“${t.title}” → ${tCol(col.name)}`); renderAll(); }
   catch (err) { toast(err.message, false); }
 }
 
@@ -165,7 +334,7 @@ async function moveTask(id, columnId) {
 function renderTodo() {
   const groups = {};
   for (const t of S.tasks) { const k = personName(t.assigneeId); (groups[k] = groups[k] || []).push(t); }
-  $('#view-todo').innerHTML = `<h2>To-Do list</h2><p class="muted">Same tasks as the Kanban, grouped by assignee. Field technicians appear as assignees only — they have no login.</p>` +
+  $('#view-todo').innerHTML = `<h2>${t('todo_title')}</h2><p class="muted">${t('todo_sub')}</p>` +
     Object.entries(groups).map(([who, list]) => `<div class="panel"><h3>${esc(who)}</h3><ul>${list.map((t) => `<li><a href="#" data-open="${t.id}">${esc(t.title)}</a> — ${esc(colById(t.columnId)?.name || '')}${t.dueDate ? ` · due ${esc(t.dueDate)}` : ''} <span class="pill">${esc(t.priority)}</span></li>`).join('')}</ul></div>`).join('');
   bindOpenLinks();
 }
@@ -181,8 +350,8 @@ function renderCalendar() {
   const y = calCursor.getFullYear(), m = calCursor.getMonth();
   const first = new Date(y, m, 1), daysIn = new Date(y, m + 1, 0).getDate();
   const startDow = (first.getDay() + 6) % 7; // Monday-first
-  const monthName = first.toLocaleString('en', { month: 'long', year: 'numeric' });
-  let cells = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => `<div class="dow">${d}</div>`).join('');
+  const monthName = first.toLocaleString(lang === 'id' ? 'id-ID' : 'en', { month: 'long', year: 'numeric' });
+  let cells = (lang === 'id' ? ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']).map((d) => `<div class="dow">${d}</div>`).join('');
   for (let i = 0; i < startDow; i++) cells += '<div></div>';
   for (let d = 1; d <= daysIn; d++) {
     const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -192,19 +361,19 @@ function renderCalendar() {
       ${due.map((t) => `<div>📌 <a href="#" data-open="${t.id}">${esc(t.title.slice(0, 28))}</a></div>`).join('')}
       ${sh.map((s) => `<div>🕐 ${esc(personName(s.personId))} (${esc(s.shiftName)})</div>`).join('')}</div>`;
   }
-  $('#view-calendar').innerHTML = `<h2>Calendar — ${monthName}</h2>
-    <p><button class="btn" id="calPrev">‹ Prev</button> <button class="btn" id="calNext">Next ›</button>
-    <button class="btn" id="calToday">Today</button></p>
+  $('#view-calendar').innerHTML = `<h2>${t('cal_title')} — ${monthName}</h2>
+    <p><button class="btn" id="calPrev">${t('prev')}</button> <button class="btn" id="calNext">${t('next')}</button>
+    <button class="btn" id="calToday">${t('today_btn')}</button></p>
     <div class="cal">${cells}</div>
-    <div class="panel"><h3>Shift import</h3>
-      <p class="muted">Upload a CSV (or paste it below) with columns Date | Name | Shift | Start | End | Department | Notes. Names are matched to people; re-importing the same person + date replaces the old shift instead of duplicating it.</p>
-      <p><a class="btn" href="/api/shifts/template.csv">Download CSV template</a></p>
+    <div class="panel"><h3>${t('shift_import')}</h3>
+      <p class="muted">${t('shift_import_help')}</p>
+      <p><a class="btn" href="/api/shifts/template.csv">${t('download_template')}</a></p>
       <p><input type="file" id="csvFile" accept=".csv,text/csv"></p>
       <textarea id="csvPaste" rows="4" style="width:100%" placeholder="2026-11-08,Bima Prasetyo,Pagi,07:00,15:00,NOC,"></textarea>
       <p><button class="btn primary" id="csvPreviewBtn">Preview import</button></p>
       <div id="csvPreview"></div>
     </div>
-    <div class="panel"><h3>Who is on board — pick a day</h3><p class="muted">Click any day above to see its shifts here.</p><div id="dayDetail"></div></div>`;
+    <div class="panel"><h3>${t('onboard_pick')}</h3><p class="muted">${t('click_day')}</p><div id="dayDetail"></div></div>`;
   $('#calPrev').onclick = () => { calCursor = new Date(y, m - 1, 1); renderCalendar(); };
   $('#calNext').onclick = () => { calCursor = new Date(y, m + 1, 1); renderCalendar(); };
   $('#calToday').onclick = () => { calCursor = new Date(); renderCalendar(); };
@@ -214,8 +383,8 @@ function renderCalendar() {
     const sh = S.shifts.filter((s) => s.date === ds);
     const due = S.tasks.filter((t) => t.dueDate === ds);
     $('#dayDetail').innerHTML = `<h4>${ds}</h4>
-      <p><b>On shift:</b> ${sh.length ? sh.map((s) => `${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)}`).join('<br>') : 'nobody recorded'}</p>
-      <p><b>Tasks due:</b> ${due.length ? due.map((t) => esc(t.title)).join('<br>') : 'none'}</p>`;
+      <p><b>${t('on_shift')}:</b> ${sh.length ? sh.map((s) => `${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)}`).join('<br>') : t('nobody')}</p>
+      <p><b>${t('tasks_due')}:</b> ${due.length ? due.map((t) => esc(t.title)).join('<br>') : t('none')}</p>`;
   }));
   $('#csvFile').addEventListener('change', (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -223,16 +392,16 @@ function renderCalendar() {
   });
   $('#csvPreviewBtn').onclick = () => {
     const rows = parseCsv($('#csvPaste').value);
-    if (!rows.length) { toast('Nothing to import — paste CSV first.', false); return; }
+    if (!rows.length) { toast(t('nothing_to_import'), false); return; }
     const matched = rows.filter((r) => S.people.some((p) => p.name.toLowerCase() === (r.name || '').toLowerCase()));
-    $('#csvPreview').innerHTML = `<table><tr><th>Date</th><th>Name</th><th>Shift</th><th>Match</th></tr>${rows.map((r) => {
+    $('#csvPreview').innerHTML = `<table><tr><th>${t('date_label')}</th><th>${t('th_name')}</th><th>Shift</th><th>${lang === 'id' ? 'Cocok?' : 'Match'}</th></tr>${rows.map((r) => {
       const ok = S.people.some((p) => p.name.toLowerCase() === (r.name || '').toLowerCase());
       return `<tr><td>${esc(r.date || '')}</td><td>${esc(r.name || '')}</td><td>${esc(r.shift || '')}</td><td>${ok ? '✓ matched' : '✗ no such person'}</td></tr>`;
     }).join('')}</table>
-    <p>${matched.length} matched / ${rows.length - matched.length} no such person.</p>
-    <p><button class="btn primary" id="csvImportBtn">Import ${rows.length} rows</button></p>`;
+    <p>${matched.length} ${t('matched')} / ${rows.length - matched.length} ${t('no_such_person')}.</p>
+    <p><button class="btn primary" id="csvImportBtn">${t('import_rows')} ${rows.length}</button></p>`;
     $('#csvImportBtn').onclick = async () => {
-      try { const r = await api('/api/shifts/import', 'POST', { rows }); S = r.state; toast(`Import done: ${r.created} created, ${r.replaced} replaced, ${r.skipped} skipped.`); renderAll(); }
+      try { const r = await api('/api/shifts/import', 'POST', { rows }); S = r.state; toast(`${t('import_done')}: ${r.created} ${t('created_w')}, ${r.replaced} ${t('replaced_w')}, ${r.skipped} ${t('skipped_w')}.`); renderAll(); }
       catch (err) { toast(err.message, false); }
     };
   };
@@ -254,60 +423,60 @@ function parseCsv(text) {
 function renderMaterials() {
   const days = [...S.materialDays].sort((a, b) => b.date.localeCompare(a.date));
   const a = actor();
-  $('#view-materials').innerHTML = `<h2>Materials — daily cycle</h2>
-  <p class="muted"><b>Morning:</b> Warehouse issues everything that might be used that day. <b>During the day:</b> CS logs used / returned and submits the report. <b>Next day:</b> Warehouse checks it against issued data and approves or flags it. Issued − (used + returned) = variance; anything other than 0 is highlighted.</p>
+  $('#view-materials').innerHTML = `<h2>${t('mat_title')}</h2>
+  <p class="muted">${t('mat_help')}</p>
   ${days.map((d) => {
     const tot = d.lines.reduce((s, l) => ({ i: s.i + l.issuedQty, u: s.u + (l.usedQty || 0), r: s.r + (l.returnedQty || 0) }), { i: 0, u: 0, r: 0 });
     const variance = tot.i - tot.u - tot.r;
-    return `<div class="panel"><h3>${esc(d.date)} — status: ${esc(d.status)}${d.status === 'approved' ? ` (checked by ${esc(personName(d.checkedById))})` : ''}${d.status === 'flagged' ? ` — ${esc(d.checkNote)}` : ''}</h3>
-    <table><tr><th>Item</th><th>Issued</th><th>Used</th><th>Returned</th><th>Variance</th><th>Where it went</th></tr>
+    return `<div class="panel"><h3>${esc(d.date)} — ${t('status_col')}: ${esc(d.status)}${d.status === 'approved' ? ` (${t('checked_by')} ${esc(personName(d.checkedById))})` : ''}${d.status === 'flagged' ? ` — ${esc(d.checkNote)}` : ''}</h3>
+    <table><tr><th>${t('th_item')}</th><th>${t('th_issued')}</th><th>${t('th_used')}</th><th>${t('th_returned')}</th><th>${t('th_variance')}</th><th>${t('th_where')}</th></tr>
     ${d.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}
-    <tr><td><b>Total</b></td><td><b>${tot.i}</b></td><td><b>${tot.u}</b></td><td><b>${tot.r}</b></td><td class="${variance ? 'var-bad' : 'var-ok'}"><b>${variance}</b></td><td></td></tr></table>
-    ${d.status === 'open' && a.role === 'cs' ? `<h4>Log used / returned (Customer Service)</h4>${d.lines.map((l) => `<div><label>${esc(l.name)} — issued ${l.issuedQty} ${esc(l.unit)}</label>
-      <input type="number" min="0" step="any" id="used-${l.id}" value="${l.usedQty ?? ''}" placeholder="Used" style="width:90px">
-      <input type="number" min="0" step="any" id="ret-${l.id}" value="${l.returnedQty ?? ''}" placeholder="Returned" style="width:90px">
-      <input type="text" id="note-${l.id}" value="${esc(l.note || '')}" placeholder="Where did it go? e.g. Install Ibu Ratna, Binong" style="width:260px">
-      <button class="btn small" data-log-line="${l.id}" data-day="${d.id}">Save</button></div>`).join('')}
-      <p><button class="btn primary" data-submit-day="${d.id}">Submit daily report</button></p>` : ''}
-    ${d.status === 'open' && a.role === 'warehouse_manager' ? `<h4>Issue more material (Warehouse Manager)</h4>
-      <div><input id="issue-name-${d.id}" list="matNames" placeholder="Item name" style="width:200px"> <input id="issue-qty-${d.id}" type="number" min="0" step="any" placeholder="Qty" style="width:80px"> <input id="issue-unit-${d.id}" placeholder="Unit" value="pcs" style="width:70px">
-      <button class="btn" data-issue-day="${d.id}" data-date="${d.date}">Issue</button></div>
+    <tr><td><b>${t('total')}</b></td><td><b>${tot.i}</b></td><td><b>${tot.u}</b></td><td><b>${tot.r}</b></td><td class="${variance ? 'var-bad' : 'var-ok'}"><b>${variance}</b></td><td></td></tr></table>
+    ${d.status === 'open' && a.role === 'cs' ? `<h4>${t('log_used_h')}</h4>${d.lines.map((l) => `<div><label>${esc(l.name)} — ${t('th_issued')} ${l.issuedQty} ${esc(l.unit)}</label>
+      <input type="number" min="0" step="any" id="used-${l.id}" value="${l.usedQty ?? ''}" placeholder="${t('th_used')}" style="width:90px">
+      <input type="number" min="0" step="any" id="ret-${l.id}" value="${l.returnedQty ?? ''}" placeholder="${t('th_returned')}" style="width:90px">
+      <input type="text" id="note-${l.id}" value="${esc(l.note || '')}" placeholder="${t('where_ph')}" style="width:260px">
+      <button class="btn small" data-log-line="${l.id}" data-day="${d.id}">${t('save_btn')}</button></div>`).join('')}
+      <p><button class="btn primary" data-submit-day="${d.id}">${t('submit_report')}</button></p>` : ''}
+    ${d.status === 'open' && a.role === 'warehouse_manager' ? `<h4>${t('issue_more_h')}</h4>
+      <div><input id="issue-name-${d.id}" list="matNames" placeholder="${t('item_name_ph')}" style="width:200px"> <input id="issue-qty-${d.id}" type="number" min="0" step="any" placeholder="${t('qty_ph')}" style="width:80px"> <input id="issue-unit-${d.id}" placeholder="${t('unit_ph')}" value="pcs" style="width:70px">
+      <button class="btn" data-issue-day="${d.id}" data-date="${d.date}">${t('issued_toast')}</button></div>
       <datalist id="matNames">${S.materialNames.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>` : ''}
-    ${d.status === 'submitted' && a.role === 'warehouse_manager' ? `<h4>Check this report (Warehouse Manager)</h4>
-      <p><button class="btn primary" data-check-day="${d.id}" data-decision="approved">Approve — matches my data</button>
-      <button class="btn danger" data-check-day="${d.id}" data-decision="flagged">Flag mismatch</button></p>` : ''}
-    ${d.status === 'submitted' && a.role !== 'warehouse_manager' ? '<p class="muted">Submitted — awaiting Warehouse check (next day).</p>' : ''}
+    ${d.status === 'submitted' && a.role === 'warehouse_manager' ? `<h4>${t('check_h')}</h4>
+      <p><button class="btn primary" data-check-day="${d.id}" data-decision="approved">${t('approve_match')}</button>
+      <button class="btn danger" data-check-day="${d.id}" data-decision="flagged">${t('flag_mismatch')}</button></p>` : ''}
+    ${d.status === 'submitted' && a.role !== 'warehouse_manager' ? '<p class="muted">${t(\'submitted_waiting\')}</p>' : ''}
     </div>`;
   }).join('')}
-  <div class="panel"><h3>Issue morning material for a new day (Warehouse Manager)</h3>
-    <p class="muted">Pick a date and list everything that might be used. This creates that day's issue list.</p>
-    <label>Date <input type="date" id="newDayDate" value="${todayStr()}"></label>
-    <div id="issueLines"><div><input class="il-name" list="matNames" placeholder="Item name"> <input class="il-qty" type="number" min="0" step="any" placeholder="Qty"> <input class="il-unit" placeholder="Unit" value="pcs"></div></div>
+  <div class="panel"><h3>${t('issue_new_day')}</h3>
+    <p class="muted">${t('issue_new_help')}</p>
+    <label>${t('date_label')} <input type="date" id="newDayDate" value="${todayStr()}"></label>
+    <div id="issueLines"><div><input class="il-name" list="matNames" placeholder="${t('item_name_ph')}"> <input class="il-qty" type="number" min="0" step="any" placeholder="${t('qty_ph')}"> <input class="il-unit" placeholder="${t('unit_ph')}" value="pcs"></div></div>
     <p><button class="btn" id="addIssueLine">+ Add line</button> <button class="btn primary" id="submitIssue">Issue morning material</button></p>
   </div>`;
   document.querySelectorAll('[data-log-line]').forEach((b) => b.addEventListener('click', async () => {
-    try { S = await api(`/api/material-days/${b.dataset.day}/log`, 'POST', { lineId: Number(b.dataset.logLine), usedQty: Number(document.getElementById('used-' + b.dataset.logLine).value), returnedQty: Number(document.getElementById('ret-' + b.dataset.logLine).value), note: document.getElementById('note-' + b.dataset.logLine).value }); toast('Logged.'); renderAll(); }
+    try { S = await api(`/api/material-days/${b.dataset.day}/log`, 'POST', { lineId: Number(b.dataset.logLine), usedQty: Number(document.getElementById('used-' + b.dataset.logLine).value), returnedQty: Number(document.getElementById('ret-' + b.dataset.logLine).value), note: document.getElementById('note-' + b.dataset.logLine).value }); toast(t('logged')); renderAll(); }
     catch (err) { toast(err.message, false); }
   }));
   document.querySelectorAll('[data-submit-day]').forEach((b) => b.addEventListener('click', async () => {
-    try { S = await api(`/api/material-days/${b.dataset.submitDay}/submit`, 'POST', {}); toast('Daily report submitted — awaiting Warehouse check.'); renderAll(); }
+    try { S = await api(`/api/material-days/${b.dataset.submitDay}/submit`, 'POST', {}); toast(t('submitted_toast')); renderAll(); }
     catch (err) { toast(err.message, false); }
   }));
   document.querySelectorAll('[data-check-day]').forEach((b) => b.addEventListener('click', async () => {
-    const note = b.dataset.decision === 'flagged' ? prompt('What does not match?') || '' : '';
-    try { S = await api(`/api/material-days/${b.dataset.checkDay}/check`, 'POST', { decision: b.dataset.decision, note }); toast(`Report ${b.dataset.decision}.`); renderAll(); }
+    const note = b.dataset.decision === 'flagged' ? prompt(t('flag_prompt')) || '' : '';
+    try { S = await api(`/api/material-days/${b.dataset.checkDay}/check`, 'POST', { decision: b.dataset.decision, note }); toast(`${t('status_label')}: ${b.dataset.decision}.`); renderAll(); }
     catch (err) { toast(err.message, false); }
   }));
   document.querySelectorAll('[data-issue-day]').forEach((b) => b.addEventListener('click', async () => {
     const name = document.getElementById(`issue-name-${b.dataset.issueDay}`).value;
     const qty = Number(document.getElementById(`issue-qty-${b.dataset.issueDay}`).value);
     const unit = document.getElementById(`issue-unit-${b.dataset.issueDay}`).value || 'pcs';
-    try { S = await api(`/api/material-days/${b.dataset.date}/issue`, 'POST', { lines: [{ name, qty, unit }] }); toast('Issued.'); renderAll(); }
+    try { S = await api(`/api/material-days/${b.dataset.date}/issue`, 'POST', { lines: [{ name, qty, unit }] }); toast(t('issued_toast')); renderAll(); }
     catch (err) { toast(err.message, false); }
   }));
   $('#addIssueLine').onclick = () => {
     const div = document.createElement('div');
-    div.innerHTML = '<input class="il-name" list="matNames" placeholder="Item name"> <input class="il-qty" type="number" min="0" step="any" placeholder="Qty"> <input class="il-unit" placeholder="Unit" value="pcs">';
+    div.innerHTML = `<input class="il-name" list="matNames" placeholder="${t('item_name_ph')}"> <input class="il-qty" type="number" min="0" step="any" placeholder="${t('qty_ph')}"> <input class="il-unit" placeholder="${t('unit_ph')}" value="pcs">`;
     $('#issueLines').appendChild(div);
   };
   $('#submitIssue').onclick = async () => {
@@ -316,24 +485,24 @@ function renderMaterials() {
       qty: Number(div.querySelector('.il-qty').value),
       unit: div.querySelector('.il-unit').value || 'pcs',
     })).filter((l) => l.name && l.qty > 0);
-    if (!lines.length) { toast('Add at least one line with a name and qty.', false); return; }
-    try { S = await api(`/api/material-days/${$('#newDayDate').value}/issue`, 'POST', { lines }); toast('Morning material issued.'); renderAll(); }
+    if (!lines.length) { toast(t('add_line_required'), false); return; }
+    try { S = await api(`/api/material-days/${$('#newDayDate').value}/issue`, 'POST', { lines }); toast(t('morning_issued')); renderAll(); }
     catch (err) { toast(err.message, false); }
   };
 }
 
 // ---- Team ----
 function renderTeam() {
-  const roles = { head_noc: 'Head NOC — approves anything', osp: 'OSP — drops projects, approves only own dropped tasks', noc: 'NOC — monitors, assigns, creates handover / reminder tasks', cs: 'Customer Service — logs daily material', warehouse_manager: 'Warehouse Manager — issues + checks material', field_tech: 'Field technician — assignee only, no login' };
+  const roles = { head_noc: tRoleDesc('head_noc'), osp: tRoleDesc('osp'), noc: tRoleDesc('noc'), cs: tRoleDesc('cs'), warehouse_manager: tRoleDesc('warehouse_manager'), field_tech: tRoleDesc('field_tech') };
   const byDept = {};
   for (const p of S.people) { (byDept[p.department] = byDept[p.department] || []).push(p); }
-  $('#view-team').innerHTML = `<h2>Team</h2><p class="muted">One account per person, grouped by department. Field technicians have no account — they are assignees only, and NOC updates their work.</p>` +
-    Object.entries(byDept).map(([dept, list]) => `<div class="panel"><h3>${esc(dept)}</h3><table><tr><th>Name</th><th>Role</th><th>Can approve?</th></tr>${list.map((p) => `<tr><td>${esc(p.name)}</td><td>${esc(roles[p.role] || p.role)}</td><td>${p.role === 'head_noc' ? 'Anything' : p.role === 'osp' ? 'Own dropped tasks only' : 'No'}</td></tr>`).join('')}</table></div>`).join('');
+  $('#view-team').innerHTML = `<h2>${t('team_title')}</h2><p class="muted">${t('team_sub')}</p>` +
+    Object.entries(byDept).map(([dept, list]) => `<div class="panel"><h3>${esc(tDept(dept))}</h3><table><tr><th>${t('th_name')}</th><th>${t('th_role')}</th><th>${t('th_can_approve')}</th></tr>${list.map((p) => `<tr><td>${esc(p.name)}</td><td>${esc(roles[p.role] || p.role)}</td><td>${tApprove(p.role)}</td></tr>`).join('')}</table></div>`).join('');
 }
 
 // ---- Activity ----
 function renderActivity() {
-  $('#view-activity').innerHTML = `<h2>Activity log</h2><div class="panel"><ul>${S.activity.map((a) => `<li><b>${esc(personName(a.actorId))}</b> — ${esc(a.text)} <span class="muted">(${new Date(a.createdAt).toLocaleString('id-ID')})</span></li>`).join('')}</ul></div>`;
+  $('#view-activity').innerHTML = `<h2>${t('activity_title')}</h2><div class="panel"><ul>${S.activity.map((a) => `<li><b>${esc(personName(a.actorId))}</b> — ${esc(a.text)} <span class="muted">(${new Date(a.createdAt).toLocaleString(lang === 'id' ? 'id-ID' : 'en-GB')})</span></li>`).join('')}</ul></div>`;
 }
 
 // ---- Task detail modal ----
@@ -351,39 +520,39 @@ function openTask(id) {
   const canAppr = canApproveTask(t);
   $('#taskDetail').innerHTML = `
     <h2>${esc(t.title)}</h2>
-    <p class="muted">${esc(t.taskKind)} · ${esc(t.department || '')} · ${esc(col.name)} · Priority: ${esc(t.priority)} · Due: ${esc(t.dueDate || '—')}</p>
+    <p class="muted">${esc(tKind(t.taskKind))} · ${esc(tDept(t.department || ''))} · ${esc(tCol(col.name))} · ${t('priority_word')}: ${esc(tPri(t.priority))} · ${t('due_prefix')}: ${esc(t.dueDate || '—')}</p>
     <p>${esc(t.description || '')}</p>
-    <p class="muted">Customer: ${esc(t.customer || '—')} · Location: ${esc(t.location || '—')} · Service: ${esc(t.serviceId || '—')} · Dropped by: ${esc(personName(t.createdById))} · Assigned to: ${esc(personName(t.assigneeId))}</p>
-    ${isReview ? (ev.length ? `<div class="okbox">Evidence attached: ${ev.length} photo(s) — review below before approving.</div>`
-      : `<div class="warnbox"><b>⚠ No evidence photos.</b> This task was sent for approval with no proof. Ask for photos before approving.</div>`) : ''}
-    ${isReview ? `<p>${canAppr ? `<button class="btn primary" id="approveBtn">Approve → Done</button>` : `<button class="btn primary" disabled title="You cannot approve this task">Approve → Done</button>`}
-    <button class="btn danger" id="rejectBtn" ${canAppr ? '' : 'disabled'}>Reject back</button>
+    <p class="muted">${t('customer_word')}: ${esc(t.customer || '—')} · ${t('location_label')}: ${esc(t.location || '—')} · ${t('service_label')}: ${esc(t.serviceId || '—')} · ${t('dropped_by')}: ${esc(personName(t.createdById))} · ${t('assigned_to')}: ${esc(personName(t.assigneeId))}</p>
+    ${isReview ? (ev.length ? `<div class="okbox">${t('evidence_attached')}: ${ev.length} ${lang === 'id' ? 'foto' : 'photo(s)'} — ${t('evidence_review')}</div>`
+      : `<div class="warnbox"><b>⚠ ${t('no_evidence_warn')}</b> ${t('no_evidence_warn2')}</div>`) : ''}
+    ${isReview ? `<p>${canAppr ? `<button class="btn primary" id="approveBtn">${t('approve_done')}</button>` : `<button class="btn primary" disabled>${t('approve_done')}</button>`}
+    <button class="btn danger" id="rejectBtn" ${canAppr ? '' : 'disabled'}>${t('reject_back')}</button>
     ${!canAppr ? `<span class="muted">${actor().role === 'osp' ? 'OSP can only approve tasks they dropped themselves.' : 'Only Head NOC (anything) or OSP (own dropped tasks) can approve.'}</span>` : ''}</p>` : ''}
-    <p><label>Move to <select id="modalMove">${S.columns.map((c) => `<option value="${c.id}" ${c.id === col.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label></p>
-    <h3>Evidence photos</h3>
+    <p><label>${t('move_to_label')} <select id="modalMove">${S.columns.map((c) => `<option value="${c.id}" ${c.id === col.id ? 'selected' : ''}>${esc(tCol(c.name))}</option>`).join('')}</select></label></p>
+    <h3>${t('evidence_photos')}</h3>
     <div class="gallery">${ev.map((f) => `<figure style="margin:0"><img src="/api/files/${f.id}" data-lightbox="${f.id}" data-cap="${esc(f.caption || f.name)}" alt="${esc(f.caption || 'evidence')}">
-      <figcaption class="muted">${esc(f.caption || f.name)} · ${esc(personName(f.createdById))} · ${new Date(f.createdAt).toLocaleDateString()}</figcaption></figure>`).join('') || '<p class="muted">No evidence photos yet.</p>'}</div>
-    <div class="chip-row" id="capChips">${['ONT installed', 'Speedtest result', 'Before/After', 'ODP installed', 'Cable pulled'].map((c) => `<button type="button" data-cap="${c}">${c}</button>`).join('')}</div>
-    <p><input type="file" id="evInput" accept="image/*" multiple> <span class="muted">Caption: <b id="capLabel">—</b> (tap a chip above, or leave blank)</span></p>
-    <h3>Material (ad-hoc, per task)</h3>
-    <ul>${t.materials.map((m) => `<li>${esc(m.name)} — ${m.qty} ${esc(m.unit)}${m.serial ? ` · SN ${esc(m.serial)}` : ''} (${esc(m.direction)})${m.note ? ` · ${esc(m.note)}` : ''}</li>`).join('') || '<li class="muted">No material logged on this task.</li>'}</ul>
-    <p><input id="matName" list="matNames2" placeholder="Item name" style="width:180px"> <input id="matQty" type="number" min="0" step="any" placeholder="Qty" style="width:80px"> <input id="matUnit" placeholder="Unit" value="pcs" style="width:70px"> <input id="matSerial" placeholder="Serial (optional)" style="width:150px"> <input id="matNote" placeholder="Where did it go? (optional)" style="width:220px"> <button class="btn" id="addMatBtn">Add material</button></p>
+      <figcaption class="muted">${esc(f.caption || f.name)} · ${esc(personName(f.createdById))} · ${new Date(f.createdAt).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-GB')}</figcaption></figure>`).join('') || '<p class="muted">${t(\'no_evidence\')}</p>'}</div>
+    <div class="chip-row" id="capChips">${(lang === 'id' ? ['ONT terpasang', 'Hasil speedtest', 'Sebelum/Sesudah', 'ODP terpasang', 'Kabel ditarik'] : ['ONT installed', 'Speedtest result', 'Before/After', 'ODP installed', 'Cable pulled']).map((c) => `<button type="button" data-cap="${c}">${c}</button>`).join('')}</div>
+    <p><input type="file" id="evInput" accept="image/*" multiple> <span class="muted">${t('caption_label')} <b id="capLabel">${t('caption_blank')}</b> ${t('caption_hint')}</span></p>
+    <h3>${t('mat_adhoc')}</h3>
+    <ul>${t.materials.map((m) => `<li>${esc(m.name)} — ${m.qty} ${esc(m.unit)}${m.serial ? ` · SN ${esc(m.serial)}` : ''} (${esc(m.direction)})${m.note ? ` · ${esc(m.note)}` : ''}</li>`).join('') || '<li class="muted">${t(\'no_mat_task\')}</li>'}</ul>
+    <p><input id="matName" list="matNames2" placeholder="${t('item_name_ph')}" style="width:180px"> <input id="matQty" type="number" min="0" step="any" placeholder="${t('qty_ph')}" style="width:80px"> <input id="matUnit" placeholder="${t('unit_ph')}" value="pcs" style="width:70px"> <input id="matSerial" placeholder="${t('serial_ph')}" style="width:150px"> <input id="matNote" placeholder="${t('where_task_ph')}" style="width:220px"> <button class="btn" id="addMatBtn">${t('add_material')}</button></p>
     <datalist id="matNames2">${S.materialNames.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>
-    <h3>Files</h3>
-    <ul>${files.map((f) => `<li><a href="/api/files/${f.id}" target="_blank">${esc(f.name)}</a> <button class="btn small" data-del-file="${f.id}">✕</button></li>`).join('') || '<li class="muted">No files.</li>'}</ul>
-    <p><input type="file" id="fileInput"> <button class="btn" id="uploadFileBtn">Attach file</button></p>
-    <p><button class="btn danger" id="deleteTaskBtn">Delete task</button></p>`;
+    <h3>${t('files_h')}</h3>
+    <ul>${files.map((f) => `<li><a href="/api/files/${f.id}" target="_blank">${esc(f.name)}</a> <button class="btn small" data-del-file="${f.id}">✕</button></li>`).join('') || '<li class="muted">${t(\'no_files\')}</li>'}</ul>
+    <p><input type="file" id="fileInput"> <button class="btn" id="uploadFileBtn">${t('attach_file')}</button></p>
+    <p><button class="btn danger" id="deleteTaskBtn">${t('delete_task')}</button></p>`;
   $('#taskModal').classList.remove('hidden');
   $('#modalMove').addEventListener('change', async (e) => {
     await moveTask(t.id, Number(e.target.value)); openTask(t.id);
   });
   const appr = $('#approveBtn'); if (appr) appr.onclick = async () => {
-    try { S = await api(`/api/tasks/${t.id}/move`, 'POST', { columnId: doneCol().id }); toast('Approved → Done.'); $('#taskModal').classList.add('hidden'); renderAll(); }
+    try { S = await api(`/api/tasks/${t.id}/move`, 'POST', { columnId: doneCol().id }); toast(t('approved_toast')); $('#taskModal').classList.add('hidden'); renderAll(); }
     catch (err) { toast(err.message, false); }
   };
   const rej = $('#rejectBtn'); if (rej) rej.onclick = async () => {
-    const reason = prompt('Rejection reason:') || '';
-    try { S = await api(`/api/tasks/${t.id}/reject`, 'POST', { reason }); toast('Rejected back to In Progress.'); $('#taskModal').classList.add('hidden'); renderAll(); }
+    const reason = prompt(t('reject_reason')) || '';
+    try { S = await api(`/api/tasks/${t.id}/reject`, 'POST', { reason }); toast(t('rejected_toast')); $('#taskModal').classList.add('hidden'); renderAll(); }
     catch (err) { toast(err.message, false); }
   };
   document.querySelectorAll('#capChips button').forEach((b) => b.addEventListener('click', () => { pendingCaption = b.dataset.cap; $('#capLabel').textContent = pendingCaption; }));
@@ -394,27 +563,27 @@ function openTask(id) {
       try { S = await api(`/api/tasks/${t.id}/files`, 'POST', { name: f.name, mimeType: f.type, data, category: 'evidence', caption: pendingCaption }); }
       catch (err) { toast(err.message, false); return; }
     }
-    pendingCaption = ''; toast('Evidence photo(s) added.'); openTask(t.id); renderAll();
+    pendingCaption = ''; toast(t('evidence_added')); openTask(t.id); renderAll();
   });
   $('#fileInput') && $('#uploadFileBtn').addEventListener('click', async () => {
-    const f = $('#fileInput').files[0]; if (!f) { toast('Pick a file first.', false); return; }
+    const f = $('#fileInput').files[0]; if (!f) { toast(t('pick_file'), false); return; }
     const data = await readAsDataUrl(f);
-    try { S = await api(`/api/tasks/${t.id}/files`, 'POST', { name: f.name, mimeType: f.type, data, category: 'file', caption: '' }); toast('File attached.'); openTask(t.id); renderAll(); }
+    try { S = await api(`/api/tasks/${t.id}/files`, 'POST', { name: f.name, mimeType: f.type, data, category: 'file', caption: '' }); toast(t('file_attached')); openTask(t.id); renderAll(); }
     catch (err) { toast(err.message, false); }
   });
   document.querySelectorAll('[data-del-file]').forEach((b) => b.addEventListener('click', async () => {
-    if (!confirm('Delete this file?')) return;
+    if (!confirm(t('del_file_confirm'))) return;
     try { S = await api(`/api/files/${b.dataset.delFile}`, 'DELETE', {}); openTask(t.id); renderAll(); } catch (err) { toast(err.message, false); }
   }));
   $('#addMatBtn').addEventListener('click', async () => {
     const name = $('#matName').value.trim(), qty = Number($('#matQty').value);
-    if (!name || !(qty > 0)) { toast('Material name and qty > 0 are required.', false); return; }
-    try { S = await api(`/api/tasks/${t.id}/materials`, 'POST', { name, qty, unit: $('#matUnit').value || 'pcs', serial: $('#matSerial').value, note: $('#matNote').value }); toast('Material added.'); openTask(t.id); renderAll(); }
+    if (!name || !(qty > 0)) { toast(t('mat_required'), false); return; }
+    try { S = await api(`/api/tasks/${t.id}/materials`, 'POST', { name, qty, unit: $('#matUnit').value || 'pcs', serial: $('#matSerial').value, note: $('#matNote').value }); toast(t('material_added')); openTask(t.id); renderAll(); }
     catch (err) { toast(err.message, false); }
   });
   $('#deleteTaskBtn').addEventListener('click', async () => {
-    if (!confirm('Delete this task?')) return;
-    try { S = await api(`/api/tasks/${t.id}`, 'DELETE', {}); $('#taskModal').classList.add('hidden'); toast('Task deleted.'); renderAll(); }
+    if (!confirm(t('del_task_confirm'))) return;
+    try { S = await api(`/api/tasks/${t.id}`, 'DELETE', {}); $('#taskModal').classList.add('hidden'); toast(t('task_deleted')); renderAll(); }
     catch (err) { toast(err.message, false); }
   });
   document.querySelectorAll('[data-lightbox]').forEach((img) => img.addEventListener('click', () => {
@@ -428,33 +597,38 @@ function openTask(id) {
 function newTaskForm() {
   const staff = S.people.filter((p) => p.role !== 'field_tech');
   const field = S.people.filter((p) => p.role === 'field_tech');
-  $('#taskDetail').innerHTML = `<h2>New task</h2>
+  $('#taskDetail').innerHTML = `<h2>${t('new_task_title')}</h2>
     <div class="form-grid">
-      <div><label>Title <input id="ntTitle" style="width:100%"></label></div>
-      <div><label>Kind <select id="ntKind" style="width:100%"><option value="ticket">Ticket</option><option value="project">Project</option><option value="maintenance">Maintenance</option><option value="handover">Handover (oncoming shift)</option><option value="reminder">Reminder (future maintenance/project)</option></select></label></div>
-      <div><label>Department <select id="ntDept" style="width:100%">${[...new Set(S.people.map((p) => p.department))].map((d) => `<option>${esc(d)}</option>`).join('')}</select></label></div>
-      <div><label>Priority <select id="ntPri" style="width:100%"><option>normal</option><option>high</option><option>urgent</option></select></label></div>
-      <div><label>Assign to (field techs are assignees only) <select id="ntAssignee" style="width:100%"><option value="">— unassigned —</option><optgroup label="Staff">${staff.map((p) => `<option value="${p.id}">${esc(p.name)} (${esc(p.department)})</option>`).join('')}</optgroup><optgroup label="Field tech (no login)">${field.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</optgroup></select></label></div>
-      <div><label>Due date <input id="ntDue" type="date" style="width:100%"></label></div>
-      <div><label>Customer <input id="ntCust" style="width:100%"></label></div>
-      <div><label>Location <input id="ntLoc" style="width:100%"></label></div>
-      <div><label>Service ID <input id="ntSvc" style="width:100%"></label></div>
+      <div><label>${t('title_label')} <input id="ntTitle" style="width:100%"></label></div>
+      <div><label>${t('kind_label')} <select id="ntKind" style="width:100%"><option value="ticket">${tKind('ticket')}</option><option value="project">${tKind('project')}</option><option value="maintenance">${tKind('maintenance')}</option><option value="handover">${tKind('handover')} (${lang === 'id' ? 'shift berikutnya' : 'oncoming shift'})</option><option value="reminder">${tKind('reminder')} (${lang === 'id' ? 'pemeliharaan/proyek mendatang' : 'future maintenance/project'})</option></select></label></div>
+      <div><label>${t('dept_label')} <select id="ntDept" style="width:100%">${[...new Set(S.people.map((p) => p.department))].map((d) => `<option value="${esc(d)}">${esc(tDept(d))}</option>`).join('')}</select></label></div>
+      <div><label>${t('priority_label')} <select id="ntPri" style="width:100%"><option value="normal">${tPri('normal')}</option><option value="high">${tPri('high')}</option><option value="urgent">${tPri('urgent')}</option></select></label></div>
+      <div><label>${t('assign_label')} <select id="ntAssignee" style="width:100%"><option value="">${t('unassigned')}</option><optgroup label="${t('staff_group')}">${staff.map((p) => `<option value="${p.id}">${esc(p.name)} (${esc(p.department)})</option>`).join('')}</optgroup><optgroup label="${t('field_group')}">${field.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</optgroup></select></label></div>
+      <div><label>${t('due_label')} <input id="ntDue" type="date" style="width:100%"></label></div>
+      <div><label>${t('customer_label')} <input id="ntCust" style="width:100%"></label></div>
+      <div><label>${t('location_label')} <input id="ntLoc" style="width:100%"></label></div>
+      <div><label>${t('service_label')} <input id="ntSvc" style="width:100%"></label></div>
     </div>
-    <label>Description <textarea id="ntDesc" rows="3" style="width:100%"></textarea></label>
-    <p><button class="btn primary" id="ntCreate">Create task</button></p>`;
+    <label>${t('desc_label')} <textarea id="ntDesc" rows="3" style="width:100%"></textarea></label>
+    <p><button class="btn primary" id="ntCreate">${t('create_task')}</button></p>`;
   $('#taskModal').classList.remove('hidden');
   $('#ntCreate').onclick = async () => {
     const title = $('#ntTitle').value.trim();
-    if (!title) { toast('Title is required.', false); return; }
+    if (!title) { toast(t('title_required'), false); return; }
     try {
       S = await api('/api/tasks', 'POST', { title, taskKind: $('#ntKind').value, department: $('#ntDept').value, priority: $('#ntPri').value, assigneeId: $('#ntAssignee').value ? Number($('#ntAssignee').value) : null, dueDate: $('#ntDue').value || null, customer: $('#ntCust').value, location: $('#ntLoc').value, serviceId: $('#ntSvc').value, description: $('#ntDesc').value });
-      $('#taskModal').classList.add('hidden'); toast('Task created.'); switchView('board');
+      $('#taskModal').classList.add('hidden'); toast(t('task_created')); switchView('board');
     } catch (err) { toast(err.message, false); }
   };
 }
 
 // ---- Init ----
 document.querySelectorAll('#nav button').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
+const _le = document.getElementById('langEn'); if (_le) _le.addEventListener('click', () => setLang('en'));
+const _li = document.getElementById('langId'); if (_li) _li.addEventListener('click', () => setLang('id'));
+document.documentElement.lang = lang === 'id' ? 'id' : 'en';
+if (_le) _le.classList.toggle('active', lang === 'en');
+if (_li) _li.classList.toggle('active', lang === 'id');
 $('#actorSelect').addEventListener('change', (e) => { actorId = Number(e.target.value); localStorage.setItem('actorId', String(actorId)); refresh(); });
 $('#closeModal').addEventListener('click', () => $('#taskModal').classList.add('hidden'));
 $('#closeLightbox').addEventListener('click', () => $('#lightbox').classList.add('hidden'));
@@ -462,8 +636,8 @@ $('#taskModal').addEventListener('click', (e) => { if (e.target.id === 'taskModa
 $('#lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') $('#lightbox').classList.add('hidden'); });
 $('#newTaskBtn').addEventListener('click', newTaskForm);
 $('#addColBtn').addEventListener('click', async () => {
-  const name = prompt('New column name:'); if (!name) return;
+  const name = prompt(t('new_col_name')); if (!name) return;
   try { S = await api('/api/columns', 'POST', { name }); renderAll(); } catch (err) { toast(err.message, false); }
 });
 $('#boardFilter').addEventListener('input', () => { if (currentView === 'board') renderBoard(); });
-refresh().catch((err) => { document.getElementById('main').innerHTML = '<p>Failed to load: ' + esc(err.message) + '</p>'; });
+refresh().catch((err) => { document.getElementById('main').innerHTML = '<p>' + esc(t('failed_load')) + esc(err.message) + '</p>'; });

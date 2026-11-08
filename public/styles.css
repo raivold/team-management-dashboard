@@ -4,6 +4,9 @@
 .actor{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.actor select{padding:8px;border-radius:8px;border:1px solid #ccc}
 .role-pill{background:#2e7d6b;color:#fff;padding:4px 10px;border-radius:999px;font-size:12px}
 .demo-badge{background:#8a6d00;color:#fff;padding:4px 10px;border-radius:999px;font-size:12px}
+.lang-toggle{display:flex;border:1px solid #4a5a75;border-radius:999px;overflow:hidden}
+.lang-toggle button{padding:5px 12px;border:0;background:transparent;color:#fff;cursor:pointer;font-weight:600}
+.lang-toggle button.active{background:#fff;color:#12233a}
 .nav{display:flex;gap:6px;padding:10px 20px;background:#fff;border-bottom:1px solid #ddd;overflow-x:auto}
 .nav button{padding:9px 14px;border:1px solid #ddd;background:#f8fafc;border-radius:999px;cursor:pointer;white-space:nowrap}
 .nav button.active{background:#12233a;color:#fff;border-color:#12233a}

@@ -56,6 +56,14 @@ over Tailscale.
   Approval panel, with a warning if a task was sent for approval with no
   evidence photos. General Files section stays for configs/PDFs.
 - **File attachments per task, activity log** (who did what, when).
+- **Language — English / Bahasa Indonesia:** an **EN | ID** toggle in the
+  header switches the whole UI (nav, Kanban columns, buttons, task fields,
+  priorities, statuses, roles/departments, Materials cycle labels, evidence
+  photos, shift import, Yesterday/Today overview, empty states, warnings).
+  The choice is saved in the browser (`localStorage`, key `tmd-lang`) and
+  persists across reloads. **Default is English** on first load, so existing
+  users see no surprise change — Indonesian is one tap away. Proper names,
+  customer names, and material names are never translated.
 
 ## Stack
 
