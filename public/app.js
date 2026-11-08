@@ -96,7 +96,7 @@ function renderOverview() {
     <div class="panel"><h3>Due today</h3>${dueT.length ? `<ul>${dueT.map((x) => `<li><a href="#" data-open="${x.id}">${esc(x.title)}</a> — ${esc(personName(x.assigneeId))} · ${esc(x.location || '')}</li>`).join('')}</ul>` : '<p class="muted">Nothing due today.</p>'}
     ${overdue.length ? `<h3>Overdue</h3><ul>${overdue.map((x) => `<li>${esc(x.title)} — due ${esc(x.dueDate)}</li>`).join('')}</ul>` : ''}</div>
     <div class="panel"><h3>Who is on board today (${t})</h3>${onShift.length ? `<ul>${onShift.map((s) => `<li>${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)} (${esc(s.department)})</li>`).join('')}</ul>` : '<p class="muted">No shifts recorded for today — import the shift sheet.</p>'}</div>
-    <div class="panel"><h3>Material out yesterday</h3>${matY ? `<table><tr><th>Item</th><th>Issued</th><th>Used</th><th>Returned</th><th>Variance</th></tr>${matY.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td></tr>`; }).join('')}</table><p class="muted">Status: ${esc(matY.status)}${matY.status === 'approved' ? ' by ' + esc(personName(matY.checkedById)) : ''}</p>` : '<p class="muted">No material day recorded for yesterday.</p>'}</div>`;
+    <div class="panel"><h3>Material out yesterday</h3>${matY ? `<table><tr><th>Item</th><th>Issued</th><th>Used</th><th>Returned</th><th>Variance</th><th>Where it went</th></tr>${matY.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}</table><p class="muted">Status: ${esc(matY.status)}${matY.status === 'approved' ? ' by ' + esc(personName(matY.checkedById)) : ''}</p>` : '<p class="muted">No material day recorded for yesterday.</p>'}</div>`;
   bindOpenLinks();
 }
 
@@ -260,12 +260,13 @@ function renderMaterials() {
     const tot = d.lines.reduce((s, l) => ({ i: s.i + l.issuedQty, u: s.u + (l.usedQty || 0), r: s.r + (l.returnedQty || 0) }), { i: 0, u: 0, r: 0 });
     const variance = tot.i - tot.u - tot.r;
     return `<div class="panel"><h3>${esc(d.date)} — status: ${esc(d.status)}${d.status === 'approved' ? ` (checked by ${esc(personName(d.checkedById))})` : ''}${d.status === 'flagged' ? ` — ${esc(d.checkNote)}` : ''}</h3>
-    <table><tr><th>Item</th><th>Issued</th><th>Used</th><th>Returned</th><th>Variance</th></tr>
-    ${d.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td></tr>`; }).join('')}
-    <tr><td><b>Total</b></td><td><b>${tot.i}</b></td><td><b>${tot.u}</b></td><td><b>${tot.r}</b></td><td class="${variance ? 'var-bad' : 'var-ok'}"><b>${variance}</b></td></tr></table>
+    <table><tr><th>Item</th><th>Issued</th><th>Used</th><th>Returned</th><th>Variance</th><th>Where it went</th></tr>
+    ${d.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}
+    <tr><td><b>Total</b></td><td><b>${tot.i}</b></td><td><b>${tot.u}</b></td><td><b>${tot.r}</b></td><td class="${variance ? 'var-bad' : 'var-ok'}"><b>${variance}</b></td><td></td></tr></table>
     ${d.status === 'open' && a.role === 'cs' ? `<h4>Log used / returned (Customer Service)</h4>${d.lines.map((l) => `<div><label>${esc(l.name)} — issued ${l.issuedQty} ${esc(l.unit)}</label>
       <input type="number" min="0" step="any" id="used-${l.id}" value="${l.usedQty ?? ''}" placeholder="Used" style="width:90px">
       <input type="number" min="0" step="any" id="ret-${l.id}" value="${l.returnedQty ?? ''}" placeholder="Returned" style="width:90px">
+      <input type="text" id="note-${l.id}" value="${esc(l.note || '')}" placeholder="Where did it go? e.g. Install Ibu Ratna, Binong" style="width:260px">
       <button class="btn small" data-log-line="${l.id}" data-day="${d.id}">Save</button></div>`).join('')}
       <p><button class="btn primary" data-submit-day="${d.id}">Submit daily report</button></p>` : ''}
     ${d.status === 'open' && a.role === 'warehouse_manager' ? `<h4>Issue more material (Warehouse Manager)</h4>
@@ -285,7 +286,7 @@ function renderMaterials() {
     <p><button class="btn" id="addIssueLine">+ Add line</button> <button class="btn primary" id="submitIssue">Issue morning material</button></p>
   </div>`;
   document.querySelectorAll('[data-log-line]').forEach((b) => b.addEventListener('click', async () => {
-    try { S = await api(`/api/material-days/${b.dataset.day}/log`, 'POST', { lineId: Number(b.dataset.logLine), usedQty: Number(document.getElementById('used-' + b.dataset.logLine).value), returnedQty: Number(document.getElementById('ret-' + b.dataset.logLine).value) }); toast('Logged.'); renderAll(); }
+    try { S = await api(`/api/material-days/${b.dataset.day}/log`, 'POST', { lineId: Number(b.dataset.logLine), usedQty: Number(document.getElementById('used-' + b.dataset.logLine).value), returnedQty: Number(document.getElementById('ret-' + b.dataset.logLine).value), note: document.getElementById('note-' + b.dataset.logLine).value }); toast('Logged.'); renderAll(); }
     catch (err) { toast(err.message, false); }
   }));
   document.querySelectorAll('[data-submit-day]').forEach((b) => b.addEventListener('click', async () => {
@@ -365,8 +366,8 @@ function openTask(id) {
     <div class="chip-row" id="capChips">${['ONT installed', 'Speedtest result', 'Before/After', 'ODP installed', 'Cable pulled'].map((c) => `<button type="button" data-cap="${c}">${c}</button>`).join('')}</div>
     <p><input type="file" id="evInput" accept="image/*" multiple> <span class="muted">Caption: <b id="capLabel">—</b> (tap a chip above, or leave blank)</span></p>
     <h3>Material (ad-hoc, per task)</h3>
-    <ul>${t.materials.map((m) => `<li>${esc(m.name)} — ${m.qty} ${esc(m.unit)}${m.serial ? ` · SN ${esc(m.serial)}` : ''} (${esc(m.direction)})</li>`).join('') || '<li class="muted">No material logged on this task.</li>'}</ul>
-    <p><input id="matName" list="matNames2" placeholder="Item name" style="width:180px"> <input id="matQty" type="number" min="0" step="any" placeholder="Qty" style="width:80px"> <input id="matUnit" placeholder="Unit" value="pcs" style="width:70px"> <input id="matSerial" placeholder="Serial (optional)" style="width:150px"> <button class="btn" id="addMatBtn">Add material</button></p>
+    <ul>${t.materials.map((m) => `<li>${esc(m.name)} — ${m.qty} ${esc(m.unit)}${m.serial ? ` · SN ${esc(m.serial)}` : ''} (${esc(m.direction)})${m.note ? ` · ${esc(m.note)}` : ''}</li>`).join('') || '<li class="muted">No material logged on this task.</li>'}</ul>
+    <p><input id="matName" list="matNames2" placeholder="Item name" style="width:180px"> <input id="matQty" type="number" min="0" step="any" placeholder="Qty" style="width:80px"> <input id="matUnit" placeholder="Unit" value="pcs" style="width:70px"> <input id="matSerial" placeholder="Serial (optional)" style="width:150px"> <input id="matNote" placeholder="Where did it go? (optional)" style="width:220px"> <button class="btn" id="addMatBtn">Add material</button></p>
     <datalist id="matNames2">${S.materialNames.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>
     <h3>Files</h3>
     <ul>${files.map((f) => `<li><a href="/api/files/${f.id}" target="_blank">${esc(f.name)}</a> <button class="btn small" data-del-file="${f.id}">✕</button></li>`).join('') || '<li class="muted">No files.</li>'}</ul>
@@ -408,7 +409,7 @@ function openTask(id) {
   $('#addMatBtn').addEventListener('click', async () => {
     const name = $('#matName').value.trim(), qty = Number($('#matQty').value);
     if (!name || !(qty > 0)) { toast('Material name and qty > 0 are required.', false); return; }
-    try { S = await api(`/api/tasks/${t.id}/materials`, 'POST', { name, qty, unit: $('#matUnit').value || 'pcs', serial: $('#matSerial').value }); toast('Material added.'); openTask(t.id); renderAll(); }
+    try { S = await api(`/api/tasks/${t.id}/materials`, 'POST', { name, qty, unit: $('#matUnit').value || 'pcs', serial: $('#matSerial').value, note: $('#matNote').value }); toast('Material added.'); openTask(t.id); renderAll(); }
     catch (err) { toast(err.message, false); }
   });
   $('#deleteTaskBtn').addEventListener('click', async () => {

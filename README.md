@@ -39,6 +39,10 @@ over Tailscale.
 - **Materials — daily cycle:**
   1. Morning: Warehouse issues everything that might be used that day.
   2. During the day: CS logs used/returned per line and submits the report.
+     When logging, CS can add an optional free-text note for where the
+     material went (e.g. "Install Ibu Ratna, Binong") — manually typed,
+     never a dropdown. The note shows in the Materials table / daily report
+     so the Warehouse Manager sees it when checking the next day.
      Submit is blocked until every line is logged.
   3. Next day: Warehouse checks it against issued data and approves or flags it.
   - Reconciliation table: Issued vs Used + Returned, variance highlighted.
@@ -131,7 +135,7 @@ All mutations take `actorId` in the JSON body; rules are enforced server-side.
   `POST /api/shifts/import` `{rows:[{date,name,shift,start,end,department,notes}]}` ·
   `GET /api/shifts/template.csv`
 - `POST /api/material-days/:date/issue` (WM only) ·
-  `POST /api/material-days/:id/log` (CS only, used+returned ≤ issued) ·
+  `POST /api/material-days/:id/log` (CS only, used+returned ≤ issued, optional free-text `note` for where it went) ·
   `POST /api/material-days/:id/submit` (CS only, blocked until all logged) ·
   `POST /api/material-days/:id/check` (WM only, `{decision: approved|flagged, note}`)
 - `POST /api/tasks/:id/materials` · `DELETE /api/tasks/:id/materials/:mid`

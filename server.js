@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE TABLE IF NOT EXISTS task_materials (
   id INTEGER PRIMARY KEY AUTOINCREMENT, taskId INTEGER NOT NULL, name TEXT NOT NULL,
   qty REAL NOT NULL, unit TEXT NOT NULL DEFAULT 'pcs', serial TEXT DEFAULT '',
-  direction TEXT NOT NULL DEFAULT 'out', createdById INTEGER, createdAt TEXT NOT NULL);
+  direction TEXT NOT NULL DEFAULT 'out', note TEXT DEFAULT '', createdById INTEGER, createdAt TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS files (
   id INTEGER PRIMARY KEY AUTOINCREMENT, taskId INTEGER NOT NULL, name TEXT NOT NULL,
   mimeType TEXT DEFAULT '', size INTEGER DEFAULT 0, category TEXT NOT NULL DEFAULT 'file',
@@ -52,12 +52,18 @@ CREATE TABLE IF NOT EXISTS material_days (
 CREATE TABLE IF NOT EXISTS daily_lines (
   id INTEGER PRIMARY KEY AUTOINCREMENT, dayId INTEGER NOT NULL, name TEXT NOT NULL,
   unit TEXT NOT NULL DEFAULT 'pcs', issuedQty REAL NOT NULL, usedQty REAL, returnedQty REAL,
-  serial TEXT DEFAULT '', taskId INTEGER, createdById INTEGER, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL);
+  serial TEXT DEFAULT '', taskId INTEGER, note TEXT DEFAULT '', createdById INTEGER, createdAt TEXT NOT NULL, updatedAt TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS activity (
   id INTEGER PRIMARY KEY AUTOINCREMENT, actorId INTEGER, taskId INTEGER,
   text TEXT NOT NULL, createdAt TEXT NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_shifts_person_date ON shifts(personId, date);
 `);
+// Migration for existing databases: free-text "where it went" note on
+// material lines. Optional, defaults to empty — old lines keep working.
+for (const [table] of [['daily_lines'], ['task_materials']]) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+  if (!cols.includes('note')) db.exec(`ALTER TABLE ${table} ADD COLUMN note TEXT DEFAULT ''`);
+}
 
 const nowIso = () => new Date().toISOString();
 const dayStr = (d) => d.toISOString().slice(0, 10);
@@ -195,16 +201,18 @@ function seedIfEmpty() {
   insD.run(D.y, 'submitted', 8, 10, nowIso());
   insD.run(D.t, 'open', 8, null, null);
   const dayId = (d) => db.prepare('SELECT id FROM material_days WHERE date=?').get(d).id;
-  const insL = db.prepare(`INSERT INTO daily_lines (dayId,name,unit,issuedQty,usedQty,returnedQty,createdById,createdAt,updatedAt) VALUES (?,?,?,?,?,?,?,?,?)`);
-  for (const [n, u, iq, uq, rq] of [
-    ['ONT ZTE F660', 'pcs', 2, 1, 1], ['Drop cable', 'm', 100, 60, 40],
-    ['Konektor SC/APC', 'pcs', 10, 2, 8], ['Pigtail SC/APC', 'pcs', 2, 1, 1]]) {
-    insL.run(dayId(D.y), n, u, iq, uq, rq, 8, nowIso(), nowIso());
+  const insL = db.prepare(`INSERT INTO daily_lines (dayId,name,unit,issuedQty,usedQty,returnedQty,note,createdById,createdAt,updatedAt) VALUES (?,?,?,?,?,?,?,?,?,?)`);
+  for (const [n, u, iq, uq, rq, note] of [
+    ['ONT ZTE F660', 'pcs', 2, 1, 1, 'Install Ibu Ratna, Binong'],
+    ['Drop cable', 'm', 100, 60, 40, 'Install Ibu Ratna, Binong'],
+    ['Konektor SC/APC', 'pcs', 10, 2, 8, ''],
+    ['Pigtail SC/APC', 'pcs', 2, 1, 1, 'LOS repair Bapak Dedi, Jatiroke']]) {
+    insL.run(dayId(D.y), n, u, iq, uq, rq, note, 8, nowIso(), nowIso());
   }
   for (const [n, u, iq] of [
     ['ONT Huawei HG8245H', 'pcs', 1], ['Drop cable', 'm', 50],
     ['Splitter 1:8', 'pcs', 1], ['Konektor SC/APC', 'pcs', 10]]) {
-    insL.run(dayId(D.t), n, u, iq, null, null, 8, nowIso(), nowIso());
+    insL.run(dayId(D.t), n, u, iq, null, null, '', 8, nowIso(), nowIso());
   }
   logActivity(10, null, `submitted daily material report for ${D.y} — awaiting Warehouse check`);
   logActivity(8, null, `issued morning material for ${D.y} (demo cycle)`);
@@ -470,7 +478,11 @@ app.post('/api/material-days/:id/log', (req, res) => {
   if (!(used >= 0) || !(ret >= 0)) return res.status(400).json({ error: 'usedQty and returnedQty must be numbers >= 0.' });
   if (used + ret > line.issuedQty)
     return res.status(400).json({ error: `Used (${used}) + returned (${ret}) exceeds issued (${line.issuedQty}) for “${line.name}”.` });
-  db.prepare('UPDATE daily_lines SET usedQty=?, returnedQty=?, updatedAt=? WHERE id=?').run(used, ret, nowIso(), line.id);
+  // Optional free-text note for where the material went, typed by CS —
+  // never a dropdown. Empty/absent keeps the old note (or blank).
+  const note = typeof req.body.note === 'string' ? req.body.note.trim().slice(0, 500) : undefined;
+  if (note !== undefined) db.prepare('UPDATE daily_lines SET usedQty=?, returnedQty=?, note=?, updatedAt=? WHERE id=?').run(used, ret, note, nowIso(), line.id);
+  else db.prepare('UPDATE daily_lines SET usedQty=?, returnedQty=?, updatedAt=? WHERE id=?').run(used, ret, nowIso(), line.id);
   res.json(fullState());
 });
 app.post('/api/material-days/:id/submit', (req, res) => {
@@ -509,8 +521,9 @@ app.post('/api/tasks/:id/materials', (req, res) => {
   if (!t) return res.status(404).json({ error: 'Task not found.' });
   const b = req.body;
   if (!b.name || !(Number(b.qty) > 0)) return res.status(400).json({ error: 'Material name and qty > 0 are required.' });
-  db.prepare(`INSERT INTO task_materials (taskId,name,qty,unit,serial,direction,createdById,createdAt) VALUES (?,?,?,?,?,?,?,?)`)
-    .run(t.id, b.name, Number(b.qty), b.unit || 'pcs', b.serial || '', b.direction || 'out', actor.id, nowIso());
+  const note = typeof b.note === 'string' ? b.note.trim().slice(0, 500) : '';
+  db.prepare(`INSERT INTO task_materials (taskId,name,qty,unit,serial,direction,note,createdById,createdAt) VALUES (?,?,?,?,?,?,?,?,?)`)
+    .run(t.id, b.name, Number(b.qty), b.unit || 'pcs', b.serial || '', b.direction || 'out', note, actor.id, nowIso());
   res.status(201).json(fullState());
 });
 app.delete('/api/tasks/:id/materials/:mid', (req, res) => {
