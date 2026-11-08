@@ -70,6 +70,7 @@ over Tailscale.
 
 ## Changelog
 
+- **v1.5.0** — Restyled the standalone to match the Muse prototype: same navy/blue/teal palette, now with soft shadows, 12–14px rounded cards/panels/columns, stat cards with coloured left accents, Kanban task cards that lift on hover, a gradient navy topbar, pill nav with shadow, cleaner tables, and rounded buttons/inputs/modals. CSS/layout only — no logic, roles, approval rules, i18n strings, or API behaviour changed; no external fonts/CDN.
 - **v1.4.1** — Bugfix: fixed `Failed to load: t is not a function` on Overview. The i18n translator was named `t` and got shadowed by local variables also named `t` (`todayStr()` result, task lookups). The translator is now `tr` throughout, and the broken `no_shifts_today` / `no_mat_yday` strings are plain text again (English + Indonesian).
 - **v1.4.0** — "+ Add task" only in Backlog and To Do (server-enforced).
 - **v1.3.0** — Bahasa Indonesia version: EN | ID language toggle.
