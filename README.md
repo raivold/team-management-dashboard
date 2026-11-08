@@ -68,6 +68,15 @@ over Tailscale.
   users see no surprise change — Indonesian is one tap away. Proper names,
   customer names, and material names are never translated.
 
+## Changelog
+
+- **v1.4.1** — Bugfix: fixed `Failed to load: t is not a function` on Overview. The i18n translator was named `t` and got shadowed by local variables also named `t` (`todayStr()` result, task lookups). The translator is now `tr` throughout, and the broken `no_shifts_today` / `no_mat_yday` strings are plain text again (English + Indonesian).
+- **v1.4.0** — "+ Add task" only in Backlog and To Do (server-enforced).
+- **v1.3.0** — Bahasa Indonesia version: EN | ID language toggle.
+- **v1.2.0** — CS free-text "where did it go?" note on material lines.
+- **v1.1.0** — Warehouse Manager sees Materials only.
+- **v1.0.0** — Initial standalone release.
+
 ## Stack
 
 Node.js 22+ + Express + SQLite (`node:sqlite`, no native addons) + vanilla

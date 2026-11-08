@@ -16,7 +16,7 @@ en: {
   on_shift_today:'On shift today', needs_attention:'Needs attention (Pending Approval)',
   done_yesterday_h:'Done yesterday', due_today_h:'Due today', overdue_h:'Overdue', onboard_h:'Who is on board today',
   mat_out_yday:'Material out yesterday', nothing_done_yday:'Nothing completed yesterday.', nothing_due_today:'Nothing due today.',
-  no_shifts_today:'${t(\'no_shifts_today\')}', no_mat_yday:'${t(\'no_mat_yday\')}',
+  no_shifts_today:'No shifts recorded today — import a shift file.', no_mat_yday:'No material record for yesterday.',
   status_label:'Status', by_label:'by',
   new_task:'+ Add task', add_column:'+ Add column', filter_ph:'Filter by city, customer, technician…',
   empty_col:'Empty', move_to:'Move to…',
@@ -131,7 +131,7 @@ id: {
   due_prefix:'Jatuh tempo', priority_word:'Prioritas', customer_word:'Pelanggan', dropped_by:'Dibuat oleh', assigned_to:'Ditugaskan ke',
   checked_by:'diperiksa oleh', failed_load:'Gagal memuat: ',
 }};
-const t = (k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
+const tr = (k) => (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k;
 const COL_NAMES = { 'Backlog':['Backlog','Backlog'], 'To Do':['To Do','Yang Harus Dikerjakan'], 'In Progress':['In Progress','Sedang Dikerjakan'], 'Waiting':['Waiting','Menunggu'], 'Pending Approval':['Pending Approval','Menunggu Persetujuan'], 'Done':['Done','Selesai'] };
 const tCol = (name) => (COL_NAMES[name] ? COL_NAMES[name][lang === 'id' ? 1 : 0] : name);
 const tPri = (p) => ({ normal:['normal','Normal'], high:['high','Tinggi'], urgent:['urgent','Mendesak'] }[p] || [p, p])[lang === 'id' ? 1 : 0];
@@ -152,10 +152,10 @@ function setLang(l) {
   lang = l;
   try { localStorage.setItem('tmd-lang', l); } catch {}
   document.documentElement.lang = l === 'id' ? 'id' : 'en';
-  document.querySelectorAll('#nav button').forEach((b) => { b.textContent = t('nav_' + b.dataset.view); });
-  const sub = document.querySelector('.topbar .sub'); if (sub) sub.textContent = t('subtitle');
-  const al = document.querySelector('label[for="actorSelect"]'); if (al) al.textContent = t('acting_as');
-  const db = document.querySelector('.demo-badge'); if (db) db.textContent = t('demo_badge');
+  document.querySelectorAll('#nav button').forEach((b) => { b.textContent = tr('nav_' + b.dataset.view); });
+  const sub = document.querySelector('.topbar .sub'); if (sub) sub.textContent = tr('subtitle');
+  const al = document.querySelector('label[for="actorSelect"]'); if (al) al.textContent = tr('acting_as');
+  const db = document.querySelector('.demo-badge'); if (db) db.textContent = tr('demo_badge');
   const be = document.getElementById('langEn'); if (be) be.classList.toggle('active', l === 'en');
   const bi = document.getElementById('langId'); if (bi) bi.classList.toggle('active', l === 'id');
   applyStaticText();
@@ -199,12 +199,12 @@ const isWM = () => actor().role === 'warehouse_manager';
 // force Materials as the landing view. The server enforces this too —
 // this only reflects it in the UI.
 function applyStaticText() {
-  document.querySelectorAll('#nav button').forEach((b) => { b.textContent = t('nav_' + b.dataset.view); });
-  const ab = document.getElementById('addColBtn'); if (ab) ab.textContent = t('add_column');
-  const bf = document.getElementById('boardFilter'); if (bf) bf.placeholder = t('filter_ph');
-  const sub = document.querySelector('.topbar .sub'); if (sub) sub.textContent = t('subtitle');
-  const al = document.querySelector('label[for="actorSelect"]'); if (al) al.textContent = t('acting_as');
-  const db = document.querySelector('.demo-badge'); if (db) db.textContent = t('demo_badge');
+  document.querySelectorAll('#nav button').forEach((b) => { b.textContent = tr('nav_' + b.dataset.view); });
+  const ab = document.getElementById('addColBtn'); if (ab) ab.textContent = tr('add_column');
+  const bf = document.getElementById('boardFilter'); if (bf) bf.placeholder = tr('filter_ph');
+  const sub = document.querySelector('.topbar .sub'); if (sub) sub.textContent = tr('subtitle');
+  const al = document.querySelector('label[for="actorSelect"]'); if (al) al.textContent = tr('acting_as');
+  const db = document.querySelector('.demo-badge'); if (db) db.textContent = tr('demo_badge');
 }
 function applyRoleVisibility() {
   const wm = isWM();
@@ -256,21 +256,21 @@ function renderOverview() {
   const onShift = S.shifts.filter((s) => s.date === t);
   const attention = S.tasks.filter((x) => colById(x.columnId)?.kind === 'review');
   $('#view-overview').innerHTML = `
-    <h2>${t('overview_title')}</h2>
-    <p class="muted">${y} → ${t} · ${t('overview_sub')}</p>
+    <h2>${tr('overview_title')}</h2>
+    <p class="muted">${y} → ${t} · ${tr('overview_sub')}</p>
     <div class="cards">
-      <div class="card ok"><div class="big">${doneY.length}</div><div class="label">${t('done_yesterday')}</div></div>
-      <div class="card"><div class="big">${dueT.length}</div><div class="label">${t('due_today')}</div></div>
-      <div class="card ${overdue.length ? 'warn' : ''}"><div class="big">${overdue.length}</div><div class="label">${t('overdue')}</div></div>
-      <div class="card"><div class="big">${usedY}</div><div class="label">${t('mat_used_yday')}</div></div>
-      <div class="card"><div class="big">${onShift.length}</div><div class="label">${t('on_shift_today')}</div></div>
-      <div class="card ${attention.length ? 'warn' : ''}"><div class="big">${attention.length}</div><div class="label">${t('needs_attention')}</div></div>
+      <div class="card ok"><div class="big">${doneY.length}</div><div class="label">${tr('done_yesterday')}</div></div>
+      <div class="card"><div class="big">${dueT.length}</div><div class="label">${tr('due_today')}</div></div>
+      <div class="card ${overdue.length ? 'warn' : ''}"><div class="big">${overdue.length}</div><div class="label">${tr('overdue')}</div></div>
+      <div class="card"><div class="big">${usedY}</div><div class="label">${tr('mat_used_yday')}</div></div>
+      <div class="card"><div class="big">${onShift.length}</div><div class="label">${tr('on_shift_today')}</div></div>
+      <div class="card ${attention.length ? 'warn' : ''}"><div class="big">${attention.length}</div><div class="label">${tr('needs_attention')}</div></div>
     </div>
-    <div class="panel"><h3>${t('done_yesterday_h')}</h3>${doneY.length ? `<ul>${doneY.map((x) => `<li>${esc(x.title)} — ${esc(personName(x.assigneeId))}</li>`).join('')}</ul>` : '<p class="muted">${t(\'nothing_done_yday\')}</p>'}</div>
-    <div class="panel"><h3>${t('due_today_h')}</h3>${dueT.length ? `<ul>${dueT.map((x) => `<li><a href="#" data-open="${x.id}">${esc(x.title)}</a> — ${esc(personName(x.assigneeId))} · ${esc(x.location || '')}</li>`).join('')}</ul>` : '<p class="muted">${t(\'nothing_due_today\')}</p>'}
-    ${overdue.length ? `<h3>${t('overdue_h')}</h3><ul>${overdue.map((x) => `<li>${esc(x.title)} — ${t('due_prefix')} ${esc(x.dueDate)}</li>`).join('')}</ul>` : ''}</div>
-    <div class="panel"><h3>${t('onboard_h')} (${t})</h3>${onShift.length ? `<ul>${onShift.map((s) => `<li>${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)} (${esc(tDept(s.department))})</li>`).join('')}</ul>` : '<p class="muted">${t(\'no_shifts_today\')}</p>'}</div>
-    <div class="panel"><h3>${t('mat_out_yday')}</h3>${matY ? `<table><tr><th>${t('th_item')}</th><th>${t('th_issued')}</th><th>${t('th_used')}</th><th>${t('th_returned')}</th><th>${t('th_variance')}</th><th>${t('th_where')}</th></tr>${matY.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}</table><p class="muted">${t('status_label')}: ${esc(matY.status)}${matY.status === 'approved' ? ' ' + t('by_label') + ' ' + esc(personName(matY.checkedById)) : ''}</p>` : '<p class="muted">${t(\'no_mat_yday\')}</p>'}</div>`;
+    <div class="panel"><h3>${tr('done_yesterday_h')}</h3>${doneY.length ? `<ul>${doneY.map((x) => `<li>${esc(x.title)} — ${esc(personName(x.assigneeId))}</li>`).join('')}</ul>` : '<p class="muted">${tr(\'nothing_done_yday\')}</p>'}</div>
+    <div class="panel"><h3>${tr('due_today_h')}</h3>${dueT.length ? `<ul>${dueT.map((x) => `<li><a href="#" data-open="${x.id}">${esc(x.title)}</a> — ${esc(personName(x.assigneeId))} · ${esc(x.location || '')}</li>`).join('')}</ul>` : '<p class="muted">${tr(\'nothing_due_today\')}</p>'}
+    ${overdue.length ? `<h3>${tr('overdue_h')}</h3><ul>${overdue.map((x) => `<li>${esc(x.title)} — ${tr('due_prefix')} ${esc(x.dueDate)}</li>`).join('')}</ul>` : ''}</div>
+    <div class="panel"><h3>${tr('onboard_h')} (${t})</h3>${onShift.length ? `<ul>${onShift.map((s) => `<li>${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)} (${esc(tDept(s.department))})</li>`).join('')}</ul>` : '<p class="muted">${tr(\'no_shifts_today\')}</p>'}</div>
+    <div class="panel"><h3>${tr('mat_out_yday')}</h3>${matY ? `<table><tr><th>${tr('th_item')}</th><th>${tr('th_issued')}</th><th>${tr('th_used')}</th><th>${tr('th_returned')}</th><th>${tr('th_variance')}</th><th>${tr('th_where')}</th></tr>${matY.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}</table><p class="muted">${tr('status_label')}: ${esc(matY.status)}${matY.status === 'approved' ? ' ' + tr('by_label') + ' ' + esc(personName(matY.checkedById)) : ''}</p>` : '<p class="muted">${tr(\'no_mat_yday\')}</p>'}</div>`;
   bindOpenLinks();
 }
 
@@ -282,10 +282,10 @@ function taskCard(t) {
     <div class="t">${esc(t.title)}</div>
     <div class="m">${esc(t.customer || t.location || '')}</div>
     <div class="m"><span class="pill ${t.priority === 'high' || t.priority === 'urgent' ? t.priority : ''}">${esc(tPri(t.priority))}</span>
-    <span class="pill">${esc(tKind(t.taskKind))}</span>${t.dueDate ? `<span>${t('due_prefix')} ${esc(t.dueDate)}</span>` : ''}</div>
+    <span class="pill">${esc(tKind(t.taskKind))}</span>${t.dueDate ? `<span>${tr('due_prefix')} ${esc(t.dueDate)}</span>` : ''}</div>
     <div class="m">${esc(personName(t.assigneeId))} · ${esc(t.department || '')}</div>
     ${ev ? `<div class="badge-cam">📷 ${ev} evidence</div>` : ''}
-    <div class="m"><select class="move-to" data-id="${t.id}"><option value="">${t('move_to')}</option>${S.columns.map((c) => `<option value="${c.id}" ${c.id === col.id ? 'disabled' : ''}>${esc(tCol(c.name))}</option>`).join('')}</select></div>
+    <div class="m"><select class="move-to" data-id="${t.id}"><option value="">${tr('move_to')}</option>${S.columns.map((c) => `<option value="${c.id}" ${c.id === col.id ? 'disabled' : ''}>${esc(tCol(c.name))}</option>`).join('')}</select></div>
   </div>`;
 }
 function renderBoard() {
@@ -296,8 +296,8 @@ function renderBoard() {
     return `<div class="column" data-col="${c.id}"><h3>${esc(tCol(c.name))} (${list.length})
       <span><button class="btn small" data-rename-col="${c.id}">✎</button>
       <button class="btn small" data-del-col="${c.id}">✕</button></span></h3>
-      ${list.map(taskCard).join('') || '<p class="muted">${t(\'empty_col\')}</p>'}
-      ${isEntryColumn(c) ? `<button class="btn primary" data-add-task="${c.id}">${t('new_task')}</button>` : ''}</div>`;
+      ${list.map(taskCard).join('') || '<p class="muted">${tr(\'empty_col\')}</p>'}
+      ${isEntryColumn(c) ? `<button class="btn primary" data-add-task="${c.id}">${tr('new_task')}</button>` : ''}</div>`;
   }).join('');
   document.querySelectorAll('[data-add-task]').forEach((b) => b.addEventListener('click', (e) => {
     e.stopPropagation(); newTaskForm(Number(b.dataset.addTask));
@@ -318,12 +318,12 @@ function renderBoard() {
   }));
   document.querySelectorAll('[data-rename-col]').forEach((b) => b.addEventListener('click', async (e) => {
     e.stopPropagation();
-    const name = prompt(t('rename_col'), colById(Number(b.dataset.renameCol)).name);
+    const name = prompt(tr('rename_col'), colById(Number(b.dataset.renameCol)).name);
     if (name) { try { S = await api(`/api/columns/${b.dataset.renameCol}`, 'PATCH', { name }); renderAll(); } catch (err) { toast(err.message, false); } }
   }));
   document.querySelectorAll('[data-del-col]').forEach((b) => b.addEventListener('click', async (e) => {
     e.stopPropagation();
-    if (!confirm(t('del_col_confirm'))) return;
+    if (!confirm(tr('del_col_confirm'))) return;
     try { S = await api(`/api/columns/${b.dataset.delCol}`, 'DELETE', {}); renderAll(); } catch (err) { toast(err.message, false); }
   }));
   bindOpenLinks();
@@ -343,7 +343,7 @@ async function moveTask(id, columnId) {
 function renderTodo() {
   const groups = {};
   for (const t of S.tasks) { const k = personName(t.assigneeId); (groups[k] = groups[k] || []).push(t); }
-  $('#view-todo').innerHTML = `<h2>${t('todo_title')}</h2><p class="muted">${t('todo_sub')}</p>` +
+  $('#view-todo').innerHTML = `<h2>${tr('todo_title')}</h2><p class="muted">${tr('todo_sub')}</p>` +
     Object.entries(groups).map(([who, list]) => `<div class="panel"><h3>${esc(who)}</h3><ul>${list.map((t) => `<li><a href="#" data-open="${t.id}">${esc(t.title)}</a> — ${esc(colById(t.columnId)?.name || '')}${t.dueDate ? ` · due ${esc(t.dueDate)}` : ''} <span class="pill">${esc(t.priority)}</span></li>`).join('')}</ul></div>`).join('');
   bindOpenLinks();
 }
@@ -370,19 +370,19 @@ function renderCalendar() {
       ${due.map((t) => `<div>📌 <a href="#" data-open="${t.id}">${esc(t.title.slice(0, 28))}</a></div>`).join('')}
       ${sh.map((s) => `<div>🕐 ${esc(personName(s.personId))} (${esc(s.shiftName)})</div>`).join('')}</div>`;
   }
-  $('#view-calendar').innerHTML = `<h2>${t('cal_title')} — ${monthName}</h2>
-    <p><button class="btn" id="calPrev">${t('prev')}</button> <button class="btn" id="calNext">${t('next')}</button>
-    <button class="btn" id="calToday">${t('today_btn')}</button></p>
+  $('#view-calendar').innerHTML = `<h2>${tr('cal_title')} — ${monthName}</h2>
+    <p><button class="btn" id="calPrev">${tr('prev')}</button> <button class="btn" id="calNext">${tr('next')}</button>
+    <button class="btn" id="calToday">${tr('today_btn')}</button></p>
     <div class="cal">${cells}</div>
-    <div class="panel"><h3>${t('shift_import')}</h3>
-      <p class="muted">${t('shift_import_help')}</p>
-      <p><a class="btn" href="/api/shifts/template.csv">${t('download_template')}</a></p>
+    <div class="panel"><h3>${tr('shift_import')}</h3>
+      <p class="muted">${tr('shift_import_help')}</p>
+      <p><a class="btn" href="/api/shifts/template.csv">${tr('download_template')}</a></p>
       <p><input type="file" id="csvFile" accept=".csv,text/csv"></p>
       <textarea id="csvPaste" rows="4" style="width:100%" placeholder="2026-11-08,Bima Prasetyo,Pagi,07:00,15:00,NOC,"></textarea>
       <p><button class="btn primary" id="csvPreviewBtn">Preview import</button></p>
       <div id="csvPreview"></div>
     </div>
-    <div class="panel"><h3>${t('onboard_pick')}</h3><p class="muted">${t('click_day')}</p><div id="dayDetail"></div></div>`;
+    <div class="panel"><h3>${tr('onboard_pick')}</h3><p class="muted">${tr('click_day')}</p><div id="dayDetail"></div></div>`;
   $('#calPrev').onclick = () => { calCursor = new Date(y, m - 1, 1); renderCalendar(); };
   $('#calNext').onclick = () => { calCursor = new Date(y, m + 1, 1); renderCalendar(); };
   $('#calToday').onclick = () => { calCursor = new Date(); renderCalendar(); };
@@ -392,8 +392,8 @@ function renderCalendar() {
     const sh = S.shifts.filter((s) => s.date === ds);
     const due = S.tasks.filter((t) => t.dueDate === ds);
     $('#dayDetail').innerHTML = `<h4>${ds}</h4>
-      <p><b>${t('on_shift')}:</b> ${sh.length ? sh.map((s) => `${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)}`).join('<br>') : t('nobody')}</p>
-      <p><b>${t('tasks_due')}:</b> ${due.length ? due.map((t) => esc(t.title)).join('<br>') : t('none')}</p>`;
+      <p><b>${tr('on_shift')}:</b> ${sh.length ? sh.map((s) => `${esc(personName(s.personId))} — ${esc(s.shiftName)} ${esc(s.startTime)}–${esc(s.endTime)}`).join('<br>') : tr('nobody')}</p>
+      <p><b>${tr('tasks_due')}:</b> ${due.length ? due.map((t) => esc(t.title)).join('<br>') : tr('none')}</p>`;
   }));
   $('#csvFile').addEventListener('change', (e) => {
     const f = e.target.files[0]; if (!f) return;
@@ -401,16 +401,16 @@ function renderCalendar() {
   });
   $('#csvPreviewBtn').onclick = () => {
     const rows = parseCsv($('#csvPaste').value);
-    if (!rows.length) { toast(t('nothing_to_import'), false); return; }
+    if (!rows.length) { toast(tr('nothing_to_import'), false); return; }
     const matched = rows.filter((r) => S.people.some((p) => p.name.toLowerCase() === (r.name || '').toLowerCase()));
-    $('#csvPreview').innerHTML = `<table><tr><th>${t('date_label')}</th><th>${t('th_name')}</th><th>Shift</th><th>${lang === 'id' ? 'Cocok?' : 'Match'}</th></tr>${rows.map((r) => {
+    $('#csvPreview').innerHTML = `<table><tr><th>${tr('date_label')}</th><th>${tr('th_name')}</th><th>Shift</th><th>${lang === 'id' ? 'Cocok?' : 'Match'}</th></tr>${rows.map((r) => {
       const ok = S.people.some((p) => p.name.toLowerCase() === (r.name || '').toLowerCase());
       return `<tr><td>${esc(r.date || '')}</td><td>${esc(r.name || '')}</td><td>${esc(r.shift || '')}</td><td>${ok ? '✓ matched' : '✗ no such person'}</td></tr>`;
     }).join('')}</table>
-    <p>${matched.length} ${t('matched')} / ${rows.length - matched.length} ${t('no_such_person')}.</p>
-    <p><button class="btn primary" id="csvImportBtn">${t('import_rows')} ${rows.length}</button></p>`;
+    <p>${matched.length} ${tr('matched')} / ${rows.length - matched.length} ${tr('no_such_person')}.</p>
+    <p><button class="btn primary" id="csvImportBtn">${tr('import_rows')} ${rows.length}</button></p>`;
     $('#csvImportBtn').onclick = async () => {
-      try { const r = await api('/api/shifts/import', 'POST', { rows }); S = r.state; toast(`${t('import_done')}: ${r.created} ${t('created_w')}, ${r.replaced} ${t('replaced_w')}, ${r.skipped} ${t('skipped_w')}.`); renderAll(); }
+      try { const r = await api('/api/shifts/import', 'POST', { rows }); S = r.state; toast(`${tr('import_done')}: ${r.created} ${tr('created_w')}, ${r.replaced} ${tr('replaced_w')}, ${r.skipped} ${tr('skipped_w')}.`); renderAll(); }
       catch (err) { toast(err.message, false); }
     };
   };
@@ -432,60 +432,60 @@ function parseCsv(text) {
 function renderMaterials() {
   const days = [...S.materialDays].sort((a, b) => b.date.localeCompare(a.date));
   const a = actor();
-  $('#view-materials').innerHTML = `<h2>${t('mat_title')}</h2>
-  <p class="muted">${t('mat_help')}</p>
+  $('#view-materials').innerHTML = `<h2>${tr('mat_title')}</h2>
+  <p class="muted">${tr('mat_help')}</p>
   ${days.map((d) => {
     const tot = d.lines.reduce((s, l) => ({ i: s.i + l.issuedQty, u: s.u + (l.usedQty || 0), r: s.r + (l.returnedQty || 0) }), { i: 0, u: 0, r: 0 });
     const variance = tot.i - tot.u - tot.r;
-    return `<div class="panel"><h3>${esc(d.date)} — ${t('status_col')}: ${esc(d.status)}${d.status === 'approved' ? ` (${t('checked_by')} ${esc(personName(d.checkedById))})` : ''}${d.status === 'flagged' ? ` — ${esc(d.checkNote)}` : ''}</h3>
-    <table><tr><th>${t('th_item')}</th><th>${t('th_issued')}</th><th>${t('th_used')}</th><th>${t('th_returned')}</th><th>${t('th_variance')}</th><th>${t('th_where')}</th></tr>
+    return `<div class="panel"><h3>${esc(d.date)} — ${tr('status_col')}: ${esc(d.status)}${d.status === 'approved' ? ` (${tr('checked_by')} ${esc(personName(d.checkedById))})` : ''}${d.status === 'flagged' ? ` — ${esc(d.checkNote)}` : ''}</h3>
+    <table><tr><th>${tr('th_item')}</th><th>${tr('th_issued')}</th><th>${tr('th_used')}</th><th>${tr('th_returned')}</th><th>${tr('th_variance')}</th><th>${tr('th_where')}</th></tr>
     ${d.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return `<tr><td>${esc(l.name)}</td><td>${l.issuedQty} ${esc(l.unit)}</td><td>${l.usedQty ?? '—'}</td><td>${l.returnedQty ?? '—'}</td><td class="${v ? 'var-bad' : 'var-ok'}">${v}</td><td>${esc(l.note || '')}</td></tr>`; }).join('')}
-    <tr><td><b>${t('total')}</b></td><td><b>${tot.i}</b></td><td><b>${tot.u}</b></td><td><b>${tot.r}</b></td><td class="${variance ? 'var-bad' : 'var-ok'}"><b>${variance}</b></td><td></td></tr></table>
-    ${d.status === 'open' && a.role === 'cs' ? `<h4>${t('log_used_h')}</h4>${d.lines.map((l) => `<div><label>${esc(l.name)} — ${t('th_issued')} ${l.issuedQty} ${esc(l.unit)}</label>
-      <input type="number" min="0" step="any" id="used-${l.id}" value="${l.usedQty ?? ''}" placeholder="${t('th_used')}" style="width:90px">
-      <input type="number" min="0" step="any" id="ret-${l.id}" value="${l.returnedQty ?? ''}" placeholder="${t('th_returned')}" style="width:90px">
-      <input type="text" id="note-${l.id}" value="${esc(l.note || '')}" placeholder="${t('where_ph')}" style="width:260px">
-      <button class="btn small" data-log-line="${l.id}" data-day="${d.id}">${t('save_btn')}</button></div>`).join('')}
-      <p><button class="btn primary" data-submit-day="${d.id}">${t('submit_report')}</button></p>` : ''}
-    ${d.status === 'open' && a.role === 'warehouse_manager' ? `<h4>${t('issue_more_h')}</h4>
-      <div><input id="issue-name-${d.id}" list="matNames" placeholder="${t('item_name_ph')}" style="width:200px"> <input id="issue-qty-${d.id}" type="number" min="0" step="any" placeholder="${t('qty_ph')}" style="width:80px"> <input id="issue-unit-${d.id}" placeholder="${t('unit_ph')}" value="pcs" style="width:70px">
-      <button class="btn" data-issue-day="${d.id}" data-date="${d.date}">${t('issued_toast')}</button></div>
+    <tr><td><b>${tr('total')}</b></td><td><b>${tot.i}</b></td><td><b>${tot.u}</b></td><td><b>${tot.r}</b></td><td class="${variance ? 'var-bad' : 'var-ok'}"><b>${variance}</b></td><td></td></tr></table>
+    ${d.status === 'open' && a.role === 'cs' ? `<h4>${tr('log_used_h')}</h4>${d.lines.map((l) => `<div><label>${esc(l.name)} — ${tr('th_issued')} ${l.issuedQty} ${esc(l.unit)}</label>
+      <input type="number" min="0" step="any" id="used-${l.id}" value="${l.usedQty ?? ''}" placeholder="${tr('th_used')}" style="width:90px">
+      <input type="number" min="0" step="any" id="ret-${l.id}" value="${l.returnedQty ?? ''}" placeholder="${tr('th_returned')}" style="width:90px">
+      <input type="text" id="note-${l.id}" value="${esc(l.note || '')}" placeholder="${tr('where_ph')}" style="width:260px">
+      <button class="btn small" data-log-line="${l.id}" data-day="${d.id}">${tr('save_btn')}</button></div>`).join('')}
+      <p><button class="btn primary" data-submit-day="${d.id}">${tr('submit_report')}</button></p>` : ''}
+    ${d.status === 'open' && a.role === 'warehouse_manager' ? `<h4>${tr('issue_more_h')}</h4>
+      <div><input id="issue-name-${d.id}" list="matNames" placeholder="${tr('item_name_ph')}" style="width:200px"> <input id="issue-qty-${d.id}" type="number" min="0" step="any" placeholder="${tr('qty_ph')}" style="width:80px"> <input id="issue-unit-${d.id}" placeholder="${tr('unit_ph')}" value="pcs" style="width:70px">
+      <button class="btn" data-issue-day="${d.id}" data-date="${d.date}">${tr('issued_toast')}</button></div>
       <datalist id="matNames">${S.materialNames.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>` : ''}
-    ${d.status === 'submitted' && a.role === 'warehouse_manager' ? `<h4>${t('check_h')}</h4>
-      <p><button class="btn primary" data-check-day="${d.id}" data-decision="approved">${t('approve_match')}</button>
-      <button class="btn danger" data-check-day="${d.id}" data-decision="flagged">${t('flag_mismatch')}</button></p>` : ''}
-    ${d.status === 'submitted' && a.role !== 'warehouse_manager' ? '<p class="muted">${t(\'submitted_waiting\')}</p>' : ''}
+    ${d.status === 'submitted' && a.role === 'warehouse_manager' ? `<h4>${tr('check_h')}</h4>
+      <p><button class="btn primary" data-check-day="${d.id}" data-decision="approved">${tr('approve_match')}</button>
+      <button class="btn danger" data-check-day="${d.id}" data-decision="flagged">${tr('flag_mismatch')}</button></p>` : ''}
+    ${d.status === 'submitted' && a.role !== 'warehouse_manager' ? '<p class="muted">${tr(\'submitted_waiting\')}</p>' : ''}
     </div>`;
   }).join('')}
-  <div class="panel"><h3>${t('issue_new_day')}</h3>
-    <p class="muted">${t('issue_new_help')}</p>
-    <label>${t('date_label')} <input type="date" id="newDayDate" value="${todayStr()}"></label>
-    <div id="issueLines"><div><input class="il-name" list="matNames" placeholder="${t('item_name_ph')}"> <input class="il-qty" type="number" min="0" step="any" placeholder="${t('qty_ph')}"> <input class="il-unit" placeholder="${t('unit_ph')}" value="pcs"></div></div>
+  <div class="panel"><h3>${tr('issue_new_day')}</h3>
+    <p class="muted">${tr('issue_new_help')}</p>
+    <label>${tr('date_label')} <input type="date" id="newDayDate" value="${todayStr()}"></label>
+    <div id="issueLines"><div><input class="il-name" list="matNames" placeholder="${tr('item_name_ph')}"> <input class="il-qty" type="number" min="0" step="any" placeholder="${tr('qty_ph')}"> <input class="il-unit" placeholder="${tr('unit_ph')}" value="pcs"></div></div>
     <p><button class="btn" id="addIssueLine">+ Add line</button> <button class="btn primary" id="submitIssue">Issue morning material</button></p>
   </div>`;
   document.querySelectorAll('[data-log-line]').forEach((b) => b.addEventListener('click', async () => {
-    try { S = await api(`/api/material-days/${b.dataset.day}/log`, 'POST', { lineId: Number(b.dataset.logLine), usedQty: Number(document.getElementById('used-' + b.dataset.logLine).value), returnedQty: Number(document.getElementById('ret-' + b.dataset.logLine).value), note: document.getElementById('note-' + b.dataset.logLine).value }); toast(t('logged')); renderAll(); }
+    try { S = await api(`/api/material-days/${b.dataset.day}/log`, 'POST', { lineId: Number(b.dataset.logLine), usedQty: Number(document.getElementById('used-' + b.dataset.logLine).value), returnedQty: Number(document.getElementById('ret-' + b.dataset.logLine).value), note: document.getElementById('note-' + b.dataset.logLine).value }); toast(tr('logged')); renderAll(); }
     catch (err) { toast(err.message, false); }
   }));
   document.querySelectorAll('[data-submit-day]').forEach((b) => b.addEventListener('click', async () => {
-    try { S = await api(`/api/material-days/${b.dataset.submitDay}/submit`, 'POST', {}); toast(t('submitted_toast')); renderAll(); }
+    try { S = await api(`/api/material-days/${b.dataset.submitDay}/submit`, 'POST', {}); toast(tr('submitted_toast')); renderAll(); }
     catch (err) { toast(err.message, false); }
   }));
   document.querySelectorAll('[data-check-day]').forEach((b) => b.addEventListener('click', async () => {
-    const note = b.dataset.decision === 'flagged' ? prompt(t('flag_prompt')) || '' : '';
-    try { S = await api(`/api/material-days/${b.dataset.checkDay}/check`, 'POST', { decision: b.dataset.decision, note }); toast(`${t('status_label')}: ${b.dataset.decision}.`); renderAll(); }
+    const note = b.dataset.decision === 'flagged' ? prompt(tr('flag_prompt')) || '' : '';
+    try { S = await api(`/api/material-days/${b.dataset.checkDay}/check`, 'POST', { decision: b.dataset.decision, note }); toast(`${tr('status_label')}: ${b.dataset.decision}.`); renderAll(); }
     catch (err) { toast(err.message, false); }
   }));
   document.querySelectorAll('[data-issue-day]').forEach((b) => b.addEventListener('click', async () => {
     const name = document.getElementById(`issue-name-${b.dataset.issueDay}`).value;
     const qty = Number(document.getElementById(`issue-qty-${b.dataset.issueDay}`).value);
     const unit = document.getElementById(`issue-unit-${b.dataset.issueDay}`).value || 'pcs';
-    try { S = await api(`/api/material-days/${b.dataset.date}/issue`, 'POST', { lines: [{ name, qty, unit }] }); toast(t('issued_toast')); renderAll(); }
+    try { S = await api(`/api/material-days/${b.dataset.date}/issue`, 'POST', { lines: [{ name, qty, unit }] }); toast(tr('issued_toast')); renderAll(); }
     catch (err) { toast(err.message, false); }
   }));
   $('#addIssueLine').onclick = () => {
     const div = document.createElement('div');
-    div.innerHTML = `<input class="il-name" list="matNames" placeholder="${t('item_name_ph')}"> <input class="il-qty" type="number" min="0" step="any" placeholder="${t('qty_ph')}"> <input class="il-unit" placeholder="${t('unit_ph')}" value="pcs">`;
+    div.innerHTML = `<input class="il-name" list="matNames" placeholder="${tr('item_name_ph')}"> <input class="il-qty" type="number" min="0" step="any" placeholder="${tr('qty_ph')}"> <input class="il-unit" placeholder="${tr('unit_ph')}" value="pcs">`;
     $('#issueLines').appendChild(div);
   };
   $('#submitIssue').onclick = async () => {
@@ -494,8 +494,8 @@ function renderMaterials() {
       qty: Number(div.querySelector('.il-qty').value),
       unit: div.querySelector('.il-unit').value || 'pcs',
     })).filter((l) => l.name && l.qty > 0);
-    if (!lines.length) { toast(t('add_line_required'), false); return; }
-    try { S = await api(`/api/material-days/${$('#newDayDate').value}/issue`, 'POST', { lines }); toast(t('morning_issued')); renderAll(); }
+    if (!lines.length) { toast(tr('add_line_required'), false); return; }
+    try { S = await api(`/api/material-days/${$('#newDayDate').value}/issue`, 'POST', { lines }); toast(tr('morning_issued')); renderAll(); }
     catch (err) { toast(err.message, false); }
   };
 }
@@ -505,13 +505,13 @@ function renderTeam() {
   const roles = { head_noc: tRoleDesc('head_noc'), osp: tRoleDesc('osp'), noc: tRoleDesc('noc'), cs: tRoleDesc('cs'), warehouse_manager: tRoleDesc('warehouse_manager'), field_tech: tRoleDesc('field_tech') };
   const byDept = {};
   for (const p of S.people) { (byDept[p.department] = byDept[p.department] || []).push(p); }
-  $('#view-team').innerHTML = `<h2>${t('team_title')}</h2><p class="muted">${t('team_sub')}</p>` +
-    Object.entries(byDept).map(([dept, list]) => `<div class="panel"><h3>${esc(tDept(dept))}</h3><table><tr><th>${t('th_name')}</th><th>${t('th_role')}</th><th>${t('th_can_approve')}</th></tr>${list.map((p) => `<tr><td>${esc(p.name)}</td><td>${esc(roles[p.role] || p.role)}</td><td>${tApprove(p.role)}</td></tr>`).join('')}</table></div>`).join('');
+  $('#view-team').innerHTML = `<h2>${tr('team_title')}</h2><p class="muted">${tr('team_sub')}</p>` +
+    Object.entries(byDept).map(([dept, list]) => `<div class="panel"><h3>${esc(tDept(dept))}</h3><table><tr><th>${tr('th_name')}</th><th>${tr('th_role')}</th><th>${tr('th_can_approve')}</th></tr>${list.map((p) => `<tr><td>${esc(p.name)}</td><td>${esc(roles[p.role] || p.role)}</td><td>${tApprove(p.role)}</td></tr>`).join('')}</table></div>`).join('');
 }
 
 // ---- Activity ----
 function renderActivity() {
-  $('#view-activity').innerHTML = `<h2>${t('activity_title')}</h2><div class="panel"><ul>${S.activity.map((a) => `<li><b>${esc(personName(a.actorId))}</b> — ${esc(a.text)} <span class="muted">(${new Date(a.createdAt).toLocaleString(lang === 'id' ? 'id-ID' : 'en-GB')})</span></li>`).join('')}</ul></div>`;
+  $('#view-activity').innerHTML = `<h2>${tr('activity_title')}</h2><div class="panel"><ul>${S.activity.map((a) => `<li><b>${esc(personName(a.actorId))}</b> — ${esc(a.text)} <span class="muted">(${new Date(a.createdAt).toLocaleString(lang === 'id' ? 'id-ID' : 'en-GB')})</span></li>`).join('')}</ul></div>`;
 }
 
 // ---- Task detail modal ----
@@ -529,39 +529,39 @@ function openTask(id) {
   const canAppr = canApproveTask(t);
   $('#taskDetail').innerHTML = `
     <h2>${esc(t.title)}</h2>
-    <p class="muted">${esc(tKind(t.taskKind))} · ${esc(tDept(t.department || ''))} · ${esc(tCol(col.name))} · ${t('priority_word')}: ${esc(tPri(t.priority))} · ${t('due_prefix')}: ${esc(t.dueDate || '—')}</p>
+    <p class="muted">${esc(tKind(t.taskKind))} · ${esc(tDept(t.department || ''))} · ${esc(tCol(col.name))} · ${tr('priority_word')}: ${esc(tPri(t.priority))} · ${tr('due_prefix')}: ${esc(t.dueDate || '—')}</p>
     <p>${esc(t.description || '')}</p>
-    <p class="muted">${t('customer_word')}: ${esc(t.customer || '—')} · ${t('location_label')}: ${esc(t.location || '—')} · ${t('service_label')}: ${esc(t.serviceId || '—')} · ${t('dropped_by')}: ${esc(personName(t.createdById))} · ${t('assigned_to')}: ${esc(personName(t.assigneeId))}</p>
-    ${isReview ? (ev.length ? `<div class="okbox">${t('evidence_attached')}: ${ev.length} ${lang === 'id' ? 'foto' : 'photo(s)'} — ${t('evidence_review')}</div>`
-      : `<div class="warnbox"><b>⚠ ${t('no_evidence_warn')}</b> ${t('no_evidence_warn2')}</div>`) : ''}
-    ${isReview ? `<p>${canAppr ? `<button class="btn primary" id="approveBtn">${t('approve_done')}</button>` : `<button class="btn primary" disabled>${t('approve_done')}</button>`}
-    <button class="btn danger" id="rejectBtn" ${canAppr ? '' : 'disabled'}>${t('reject_back')}</button>
+    <p class="muted">${tr('customer_word')}: ${esc(t.customer || '—')} · ${tr('location_label')}: ${esc(t.location || '—')} · ${tr('service_label')}: ${esc(t.serviceId || '—')} · ${tr('dropped_by')}: ${esc(personName(t.createdById))} · ${tr('assigned_to')}: ${esc(personName(t.assigneeId))}</p>
+    ${isReview ? (ev.length ? `<div class="okbox">${tr('evidence_attached')}: ${ev.length} ${lang === 'id' ? 'foto' : 'photo(s)'} — ${tr('evidence_review')}</div>`
+      : `<div class="warnbox"><b>⚠ ${tr('no_evidence_warn')}</b> ${tr('no_evidence_warn2')}</div>`) : ''}
+    ${isReview ? `<p>${canAppr ? `<button class="btn primary" id="approveBtn">${tr('approve_done')}</button>` : `<button class="btn primary" disabled>${tr('approve_done')}</button>`}
+    <button class="btn danger" id="rejectBtn" ${canAppr ? '' : 'disabled'}>${tr('reject_back')}</button>
     ${!canAppr ? `<span class="muted">${actor().role === 'osp' ? 'OSP can only approve tasks they dropped themselves.' : 'Only Head NOC (anything) or OSP (own dropped tasks) can approve.'}</span>` : ''}</p>` : ''}
-    <p><label>${t('move_to_label')} <select id="modalMove">${S.columns.map((c) => `<option value="${c.id}" ${c.id === col.id ? 'selected' : ''}>${esc(tCol(c.name))}</option>`).join('')}</select></label></p>
-    <h3>${t('evidence_photos')}</h3>
+    <p><label>${tr('move_to_label')} <select id="modalMove">${S.columns.map((c) => `<option value="${c.id}" ${c.id === col.id ? 'selected' : ''}>${esc(tCol(c.name))}</option>`).join('')}</select></label></p>
+    <h3>${tr('evidence_photos')}</h3>
     <div class="gallery">${ev.map((f) => `<figure style="margin:0"><img src="/api/files/${f.id}" data-lightbox="${f.id}" data-cap="${esc(f.caption || f.name)}" alt="${esc(f.caption || 'evidence')}">
-      <figcaption class="muted">${esc(f.caption || f.name)} · ${esc(personName(f.createdById))} · ${new Date(f.createdAt).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-GB')}</figcaption></figure>`).join('') || '<p class="muted">${t(\'no_evidence\')}</p>'}</div>
+      <figcaption class="muted">${esc(f.caption || f.name)} · ${esc(personName(f.createdById))} · ${new Date(f.createdAt).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-GB')}</figcaption></figure>`).join('') || '<p class="muted">${tr(\'no_evidence\')}</p>'}</div>
     <div class="chip-row" id="capChips">${(lang === 'id' ? ['ONT terpasang', 'Hasil speedtest', 'Sebelum/Sesudah', 'ODP terpasang', 'Kabel ditarik'] : ['ONT installed', 'Speedtest result', 'Before/After', 'ODP installed', 'Cable pulled']).map((c) => `<button type="button" data-cap="${c}">${c}</button>`).join('')}</div>
-    <p><input type="file" id="evInput" accept="image/*" multiple> <span class="muted">${t('caption_label')} <b id="capLabel">${t('caption_blank')}</b> ${t('caption_hint')}</span></p>
-    <h3>${t('mat_adhoc')}</h3>
-    <ul>${t.materials.map((m) => `<li>${esc(m.name)} — ${m.qty} ${esc(m.unit)}${m.serial ? ` · SN ${esc(m.serial)}` : ''} (${esc(m.direction)})${m.note ? ` · ${esc(m.note)}` : ''}</li>`).join('') || '<li class="muted">${t(\'no_mat_task\')}</li>'}</ul>
-    <p><input id="matName" list="matNames2" placeholder="${t('item_name_ph')}" style="width:180px"> <input id="matQty" type="number" min="0" step="any" placeholder="${t('qty_ph')}" style="width:80px"> <input id="matUnit" placeholder="${t('unit_ph')}" value="pcs" style="width:70px"> <input id="matSerial" placeholder="${t('serial_ph')}" style="width:150px"> <input id="matNote" placeholder="${t('where_task_ph')}" style="width:220px"> <button class="btn" id="addMatBtn">${t('add_material')}</button></p>
+    <p><input type="file" id="evInput" accept="image/*" multiple> <span class="muted">${tr('caption_label')} <b id="capLabel">${tr('caption_blank')}</b> ${tr('caption_hint')}</span></p>
+    <h3>${tr('mat_adhoc')}</h3>
+    <ul>${t.materials.map((m) => `<li>${esc(m.name)} — ${m.qty} ${esc(m.unit)}${m.serial ? ` · SN ${esc(m.serial)}` : ''} (${esc(m.direction)})${m.note ? ` · ${esc(m.note)}` : ''}</li>`).join('') || '<li class="muted">${tr(\'no_mat_task\')}</li>'}</ul>
+    <p><input id="matName" list="matNames2" placeholder="${tr('item_name_ph')}" style="width:180px"> <input id="matQty" type="number" min="0" step="any" placeholder="${tr('qty_ph')}" style="width:80px"> <input id="matUnit" placeholder="${tr('unit_ph')}" value="pcs" style="width:70px"> <input id="matSerial" placeholder="${tr('serial_ph')}" style="width:150px"> <input id="matNote" placeholder="${tr('where_task_ph')}" style="width:220px"> <button class="btn" id="addMatBtn">${tr('add_material')}</button></p>
     <datalist id="matNames2">${S.materialNames.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>
-    <h3>${t('files_h')}</h3>
-    <ul>${files.map((f) => `<li><a href="/api/files/${f.id}" target="_blank">${esc(f.name)}</a> <button class="btn small" data-del-file="${f.id}">✕</button></li>`).join('') || '<li class="muted">${t(\'no_files\')}</li>'}</ul>
-    <p><input type="file" id="fileInput"> <button class="btn" id="uploadFileBtn">${t('attach_file')}</button></p>
-    <p><button class="btn danger" id="deleteTaskBtn">${t('delete_task')}</button></p>`;
+    <h3>${tr('files_h')}</h3>
+    <ul>${files.map((f) => `<li><a href="/api/files/${f.id}" target="_blank">${esc(f.name)}</a> <button class="btn small" data-del-file="${f.id}">✕</button></li>`).join('') || '<li class="muted">${tr(\'no_files\')}</li>'}</ul>
+    <p><input type="file" id="fileInput"> <button class="btn" id="uploadFileBtn">${tr('attach_file')}</button></p>
+    <p><button class="btn danger" id="deleteTaskBtn">${tr('delete_task')}</button></p>`;
   $('#taskModal').classList.remove('hidden');
   $('#modalMove').addEventListener('change', async (e) => {
     await moveTask(t.id, Number(e.target.value)); openTask(t.id);
   });
   const appr = $('#approveBtn'); if (appr) appr.onclick = async () => {
-    try { S = await api(`/api/tasks/${t.id}/move`, 'POST', { columnId: doneCol().id }); toast(t('approved_toast')); $('#taskModal').classList.add('hidden'); renderAll(); }
+    try { S = await api(`/api/tasks/${t.id}/move`, 'POST', { columnId: doneCol().id }); toast(tr('approved_toast')); $('#taskModal').classList.add('hidden'); renderAll(); }
     catch (err) { toast(err.message, false); }
   };
   const rej = $('#rejectBtn'); if (rej) rej.onclick = async () => {
-    const reason = prompt(t('reject_reason')) || '';
-    try { S = await api(`/api/tasks/${t.id}/reject`, 'POST', { reason }); toast(t('rejected_toast')); $('#taskModal').classList.add('hidden'); renderAll(); }
+    const reason = prompt(tr('reject_reason')) || '';
+    try { S = await api(`/api/tasks/${t.id}/reject`, 'POST', { reason }); toast(tr('rejected_toast')); $('#taskModal').classList.add('hidden'); renderAll(); }
     catch (err) { toast(err.message, false); }
   };
   document.querySelectorAll('#capChips button').forEach((b) => b.addEventListener('click', () => { pendingCaption = b.dataset.cap; $('#capLabel').textContent = pendingCaption; }));
@@ -572,27 +572,27 @@ function openTask(id) {
       try { S = await api(`/api/tasks/${t.id}/files`, 'POST', { name: f.name, mimeType: f.type, data, category: 'evidence', caption: pendingCaption }); }
       catch (err) { toast(err.message, false); return; }
     }
-    pendingCaption = ''; toast(t('evidence_added')); openTask(t.id); renderAll();
+    pendingCaption = ''; toast(tr('evidence_added')); openTask(t.id); renderAll();
   });
   $('#fileInput') && $('#uploadFileBtn').addEventListener('click', async () => {
-    const f = $('#fileInput').files[0]; if (!f) { toast(t('pick_file'), false); return; }
+    const f = $('#fileInput').files[0]; if (!f) { toast(tr('pick_file'), false); return; }
     const data = await readAsDataUrl(f);
-    try { S = await api(`/api/tasks/${t.id}/files`, 'POST', { name: f.name, mimeType: f.type, data, category: 'file', caption: '' }); toast(t('file_attached')); openTask(t.id); renderAll(); }
+    try { S = await api(`/api/tasks/${t.id}/files`, 'POST', { name: f.name, mimeType: f.type, data, category: 'file', caption: '' }); toast(tr('file_attached')); openTask(t.id); renderAll(); }
     catch (err) { toast(err.message, false); }
   });
   document.querySelectorAll('[data-del-file]').forEach((b) => b.addEventListener('click', async () => {
-    if (!confirm(t('del_file_confirm'))) return;
+    if (!confirm(tr('del_file_confirm'))) return;
     try { S = await api(`/api/files/${b.dataset.delFile}`, 'DELETE', {}); openTask(t.id); renderAll(); } catch (err) { toast(err.message, false); }
   }));
   $('#addMatBtn').addEventListener('click', async () => {
     const name = $('#matName').value.trim(), qty = Number($('#matQty').value);
-    if (!name || !(qty > 0)) { toast(t('mat_required'), false); return; }
-    try { S = await api(`/api/tasks/${t.id}/materials`, 'POST', { name, qty, unit: $('#matUnit').value || 'pcs', serial: $('#matSerial').value, note: $('#matNote').value }); toast(t('material_added')); openTask(t.id); renderAll(); }
+    if (!name || !(qty > 0)) { toast(tr('mat_required'), false); return; }
+    try { S = await api(`/api/tasks/${t.id}/materials`, 'POST', { name, qty, unit: $('#matUnit').value || 'pcs', serial: $('#matSerial').value, note: $('#matNote').value }); toast(tr('material_added')); openTask(t.id); renderAll(); }
     catch (err) { toast(err.message, false); }
   });
   $('#deleteTaskBtn').addEventListener('click', async () => {
-    if (!confirm(t('del_task_confirm'))) return;
-    try { S = await api(`/api/tasks/${t.id}`, 'DELETE', {}); $('#taskModal').classList.add('hidden'); toast(t('task_deleted')); renderAll(); }
+    if (!confirm(tr('del_task_confirm'))) return;
+    try { S = await api(`/api/tasks/${t.id}`, 'DELETE', {}); $('#taskModal').classList.add('hidden'); toast(tr('task_deleted')); renderAll(); }
     catch (err) { toast(err.message, false); }
   });
   document.querySelectorAll('[data-lightbox]').forEach((img) => img.addEventListener('click', () => {
@@ -608,27 +608,27 @@ function openTask(id) {
 function newTaskForm(columnId) {
   const staff = S.people.filter((p) => p.role !== 'field_tech');
   const field = S.people.filter((p) => p.role === 'field_tech');
-  $('#taskDetail').innerHTML = `<h2>${t('new_task_title')}</h2>
+  $('#taskDetail').innerHTML = `<h2>${tr('new_task_title')}</h2>
     <div class="form-grid">
-      <div><label>${t('title_label')} <input id="ntTitle" style="width:100%"></label></div>
-      <div><label>${t('kind_label')} <select id="ntKind" style="width:100%"><option value="ticket">${tKind('ticket')}</option><option value="project">${tKind('project')}</option><option value="maintenance">${tKind('maintenance')}</option><option value="handover">${tKind('handover')} (${lang === 'id' ? 'shift berikutnya' : 'oncoming shift'})</option><option value="reminder">${tKind('reminder')} (${lang === 'id' ? 'pemeliharaan/proyek mendatang' : 'future maintenance/project'})</option></select></label></div>
-      <div><label>${t('dept_label')} <select id="ntDept" style="width:100%">${[...new Set(S.people.map((p) => p.department))].map((d) => `<option value="${esc(d)}">${esc(tDept(d))}</option>`).join('')}</select></label></div>
-      <div><label>${t('priority_label')} <select id="ntPri" style="width:100%"><option value="normal">${tPri('normal')}</option><option value="high">${tPri('high')}</option><option value="urgent">${tPri('urgent')}</option></select></label></div>
-      <div><label>${t('assign_label')} <select id="ntAssignee" style="width:100%"><option value="">${t('unassigned')}</option><optgroup label="${t('staff_group')}">${staff.map((p) => `<option value="${p.id}">${esc(p.name)} (${esc(p.department)})</option>`).join('')}</optgroup><optgroup label="${t('field_group')}">${field.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</optgroup></select></label></div>
-      <div><label>${t('due_label')} <input id="ntDue" type="date" style="width:100%"></label></div>
-      <div><label>${t('customer_label')} <input id="ntCust" style="width:100%"></label></div>
-      <div><label>${t('location_label')} <input id="ntLoc" style="width:100%"></label></div>
-      <div><label>${t('service_label')} <input id="ntSvc" style="width:100%"></label></div>
+      <div><label>${tr('title_label')} <input id="ntTitle" style="width:100%"></label></div>
+      <div><label>${tr('kind_label')} <select id="ntKind" style="width:100%"><option value="ticket">${tKind('ticket')}</option><option value="project">${tKind('project')}</option><option value="maintenance">${tKind('maintenance')}</option><option value="handover">${tKind('handover')} (${lang === 'id' ? 'shift berikutnya' : 'oncoming shift'})</option><option value="reminder">${tKind('reminder')} (${lang === 'id' ? 'pemeliharaan/proyek mendatang' : 'future maintenance/project'})</option></select></label></div>
+      <div><label>${tr('dept_label')} <select id="ntDept" style="width:100%">${[...new Set(S.people.map((p) => p.department))].map((d) => `<option value="${esc(d)}">${esc(tDept(d))}</option>`).join('')}</select></label></div>
+      <div><label>${tr('priority_label')} <select id="ntPri" style="width:100%"><option value="normal">${tPri('normal')}</option><option value="high">${tPri('high')}</option><option value="urgent">${tPri('urgent')}</option></select></label></div>
+      <div><label>${tr('assign_label')} <select id="ntAssignee" style="width:100%"><option value="">${tr('unassigned')}</option><optgroup label="${tr('staff_group')}">${staff.map((p) => `<option value="${p.id}">${esc(p.name)} (${esc(p.department)})</option>`).join('')}</optgroup><optgroup label="${tr('field_group')}">${field.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</optgroup></select></label></div>
+      <div><label>${tr('due_label')} <input id="ntDue" type="date" style="width:100%"></label></div>
+      <div><label>${tr('customer_label')} <input id="ntCust" style="width:100%"></label></div>
+      <div><label>${tr('location_label')} <input id="ntLoc" style="width:100%"></label></div>
+      <div><label>${tr('service_label')} <input id="ntSvc" style="width:100%"></label></div>
     </div>
-    <label>${t('desc_label')} <textarea id="ntDesc" rows="3" style="width:100%"></textarea></label>
-    <p><button class="btn primary" id="ntCreate">${t('create_task')}</button></p>`;
+    <label>${tr('desc_label')} <textarea id="ntDesc" rows="3" style="width:100%"></textarea></label>
+    <p><button class="btn primary" id="ntCreate">${tr('create_task')}</button></p>`;
   $('#taskModal').classList.remove('hidden');
   $('#ntCreate').onclick = async () => {
     const title = $('#ntTitle').value.trim();
-    if (!title) { toast(t('title_required'), false); return; }
+    if (!title) { toast(tr('title_required'), false); return; }
     try {
       S = await api('/api/tasks', 'POST', { title, taskKind: $('#ntKind').value, department: $('#ntDept').value, priority: $('#ntPri').value, assigneeId: $('#ntAssignee').value ? Number($('#ntAssignee').value) : null, dueDate: $('#ntDue').value || null, customer: $('#ntCust').value, location: $('#ntLoc').value, serviceId: $('#ntSvc').value, description: $('#ntDesc').value, columnId: columnId || null });
-      $('#taskModal').classList.add('hidden'); toast(t('task_created')); switchView('board');
+      $('#taskModal').classList.add('hidden'); toast(tr('task_created')); switchView('board');
     } catch (err) { toast(err.message, false); }
   };
 }
@@ -646,8 +646,8 @@ $('#closeLightbox').addEventListener('click', () => $('#lightbox').classList.add
 $('#taskModal').addEventListener('click', (e) => { if (e.target.id === 'taskModal') $('#taskModal').classList.add('hidden'); });
 $('#lightbox').addEventListener('click', (e) => { if (e.target.id === 'lightbox') $('#lightbox').classList.add('hidden'); });
 $('#addColBtn').addEventListener('click', async () => {
-  const name = prompt(t('new_col_name')); if (!name) return;
+  const name = prompt(tr('new_col_name')); if (!name) return;
   try { S = await api('/api/columns', 'POST', { name }); renderAll(); } catch (err) { toast(err.message, false); }
 });
 $('#boardFilter').addEventListener('input', () => { if (currentView === 'board') renderBoard(); });
-refresh().catch((err) => { document.getElementById('main').innerHTML = '<p>' + esc(t('failed_load')) + esc(err.message) + '</p>'; });
+refresh().catch((err) => { document.getElementById('main').innerHTML = '<p>' + esc(tr('failed_load')) + esc(err.message) + '</p>'; });
