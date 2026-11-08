@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Team Management Dashboard — PT Sakti Wijaya Network</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>Team Management Dashboard</h1>
+    <p class="sub">PT Sakti Wijaya Network · NOC / OSP / Customer Service / Warehouse</p>
+  </div>
+  <div class="actor">
+    <label for="actorSelect">Acting as</label>
+    <select id="actorSelect"></select>
+    <span id="actorRole" class="role-pill"></span>
+    <span class="demo-badge">Prototype · demo data</span>
+  </div>
+</header>
+<nav class="nav" id="nav">
+  <button data-view="overview" class="active">Overview</button>
+  <button data-view="board">Kanban</button>
+  <button data-view="todo">To-Do</button>
+  <button data-view="calendar">Calendar</button>
+  <button data-view="materials">Materials</button>
+  <button data-view="team">Team</button>
+  <button data-view="activity">Activity</button>
+</nav>
+<main id="main">
+  <section id="view-overview" class="view active"></section>
+  <section id="view-board" class="view">
+    <div class="board-toolbar">
+      <button id="newTaskBtn" class="btn primary">+ New task</button>
+      <button id="addColBtn" class="btn">+ Add column</button>
+      <input id="boardFilter" placeholder="Filter by city, customer, technician…" class="filter">
+    </div>
+    <div id="board" class="board"></div>
+  </section>
+  <section id="view-todo" class="view"></section>
+  <section id="view-calendar" class="view"></section>
+  <section id="view-materials" class="view"></section>
+  <section id="view-team" class="view"></section>
+  <section id="view-activity" class="view"></section>
+</main>
+
+<div id="taskModal" class="modal hidden">
+  <div class="modal-card">
+    <button class="modal-close" id="closeModal">✕</button>
+    <div id="taskDetail"></div>
+  </div>
+</div>
+<div id="lightbox" class="modal hidden">
+  <div class="lightbox-card">
+    <button class="modal-close" id="closeLightbox">✕</button>
+    <img id="lightboxImg" alt="Evidence photo">
+    <p id="lightboxCap"></p>
+  </div>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="/app.js"></script>
+</body>
+</html>

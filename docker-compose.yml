@@ -1,0 +1,14 @@
+services:
+  dashboard:
+    build: .
+    container_name: team-dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_PATH=/app/data/app.db
+      - UPLOADS_DIR=/app/uploads
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
