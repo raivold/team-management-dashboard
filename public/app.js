@@ -28,9 +28,22 @@ async function api(path, method = 'GET', body) {
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;
 }
+const isWM = () => actor().role === 'warehouse_manager';
+// Warehouse Manager sees Materials only: hide every other nav item and
+// force Materials as the landing view. The server enforces this too —
+// this only reflects it in the UI.
+function applyRoleVisibility() {
+  const wm = isWM();
+  document.querySelectorAll('#nav button').forEach((b) => {
+    b.style.display = wm && b.dataset.view !== 'materials' ? 'none' : '';
+  });
+  if (wm) currentView = 'materials';
+  document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.view === currentView));
+  document.querySelectorAll('.view').forEach((s) => s.classList.toggle('active', s.id === 'view-' + currentView));
+}
 async function refresh() {
-  S = await (await fetch('/api/state')).json();
-  renderActor(); renderAll();
+  S = await (await fetch('/api/state?actorId=' + actorId)).json();
+  renderActor(); applyRoleVisibility(); renderAll();
 }
 function renderActor() {
   const sel = $('#actorSelect');
@@ -40,6 +53,7 @@ function renderActor() {
   $('#actorRole').textContent = `${a.department} · ${a.role.replace(/_/g, ' ')}`;
 }
 function switchView(v) {
+  if (isWM()) v = 'materials';
   currentView = v;
   document.querySelectorAll('#nav button').forEach((b) => b.classList.toggle('active', b.dataset.view === v));
   document.querySelectorAll('.view').forEach((s) => s.classList.toggle('active', s.id === 'view-' + v));
@@ -47,6 +61,7 @@ function switchView(v) {
 }
 function renderAll() {
   if (!S) return;
+  if (isWM()) { renderMaterials(); return; }
   if (currentView === 'overview') renderOverview();
   if (currentView === 'board') renderBoard();
   if (currentView === 'todo') renderTodo();
@@ -324,6 +339,7 @@ function renderActivity() {
 let openTaskId = null;
 let pendingCaption = '';
 function openTask(id) {
+  if (isWM()) return; // WM has no task views at all.
   openTaskId = id;
   const t = S.tasks.find((x) => x.id === id);
   if (!t) return;
@@ -438,7 +454,7 @@ function newTaskForm() {
 
 // ---- Init ----
 document.querySelectorAll('#nav button').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
-$('#actorSelect').addEventListener('change', (e) => { actorId = Number(e.target.value); localStorage.setItem('actorId', String(actorId)); renderAll(); });
+$('#actorSelect').addEventListener('change', (e) => { actorId = Number(e.target.value); localStorage.setItem('actorId', String(actorId)); refresh(); });
 $('#closeModal').addEventListener('click', () => $('#taskModal').classList.add('hidden'));
 $('#closeLightbox').addEventListener('click', () => $('#lightbox').classList.add('hidden'));
 $('#taskModal').addEventListener('click', (e) => { if (e.target.id === 'taskModal') $('#taskModal').classList.add('hidden'); });

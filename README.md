@@ -27,6 +27,9 @@ over Tailscale.
   - **Customer Service (Dewi Anggraini)** — logs material used for the day.
   - **Warehouse Manager (Putri Ayu)** — issues material in the morning,
     tracks in/out (used vs returned), checks/approves the daily report.
+    **WM only sees the Materials board — nothing else.** When acting as WM
+    the UI shows Materials as the only view, and the server rejects WM
+    requests to task/board/calendar/team/activity endpoints (403).
   - **Field techs (Agus, Dedi, Joko, Rina)** — assignee-only, **no login**.
   - NOC / CS / Warehouse cannot approve a task to Done.
 - **Calendar:** tasks by due date + shifts, day detail, who's on board.

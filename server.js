@@ -80,6 +80,11 @@ function requireActor(req, res) {
   if (!a) { res.status(401).json({ error: 'Unknown or inactive user. Pick a person in the "Acting as" switcher.' }); return null; }
   return a;
 }
+// Warehouse Manager sees Materials only — enforced server-side, not just
+// by hiding navigation in the UI. WM may only use the material endpoints
+// (issue morning material, view material days, check/approve a report).
+const WM_ONLY_ERROR = 'Warehouse Manager only has access to Materials.';
+const isWarehouseManager = (actor) => actor?.role === 'warehouse_manager';
 // Approval rule (server-enforced): Head NOC approves anything; OSP approves
 // only tasks they dropped themselves; everyone else cannot approve to Done.
 function canApprove(actor, task) {
@@ -214,8 +219,20 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-function fullState() {
+function fullState(actor = null) {
   const people = db.prepare('SELECT * FROM people ORDER BY department, name').all();
+  const materialDays = db.prepare('SELECT * FROM material_days ORDER BY date DESC').all().map((d) => ({
+    ...d,
+    lines: db.prepare('SELECT * FROM daily_lines WHERE dayId=? ORDER BY id').all(d.id),
+  }));
+  const materialNames = db.prepare(
+    `SELECT DISTINCT name FROM (SELECT name FROM daily_lines UNION SELECT name FROM task_materials) ORDER BY name`).all().map((r) => r.name);
+  // A Warehouse Manager never receives task/board/calendar/team/activity
+  // data — only the people names the Materials view needs for attribution
+  // (issued by / submitted by / checked by) plus the material data itself.
+  if (isWarehouseManager(actor)) {
+    return { people, columns: [], tasks: [], shifts: [], materialDays, activity: [], materialNames };
+  }
   const columns = db.prepare('SELECT * FROM columns ORDER BY sortOrder').all();
   const tasks = db.prepare('SELECT * FROM tasks ORDER BY id').all().map((t) => ({
     ...t,
@@ -223,16 +240,31 @@ function fullState() {
     files: db.prepare('SELECT id,taskId,name,mimeType,size,category,caption,createdById,createdAt FROM files WHERE taskId=? ORDER BY id').all(t.id),
   }));
   const shifts = db.prepare('SELECT * FROM shifts ORDER BY date, startTime').all();
-  const materialDays = db.prepare('SELECT * FROM material_days ORDER BY date DESC').all().map((d) => ({
-    ...d,
-    lines: db.prepare('SELECT * FROM daily_lines WHERE dayId=? ORDER BY id').all(d.id),
-  }));
   const activity = db.prepare('SELECT * FROM activity ORDER BY id DESC LIMIT 100').all();
-  const materialNames = db.prepare(
-    `SELECT DISTINCT name FROM (SELECT name FROM daily_lines UNION SELECT name FROM task_materials) ORDER BY name`).all().map((r) => r.name);
   return { people, columns, tasks, shifts, materialDays, activity, materialNames };
 }
-app.get('/api/state', (req, res) => res.json(fullState()));
+// WM gate: any /api request from a Warehouse Manager that is not one of the
+// material endpoints below is rejected here, before any route handler runs.
+// Allowed for WM: GET /api/state (restricted payload, see fullState),
+// GET /api/health, GET /api/material-days, POST issue, POST check.
+// CS-only log/submit stay 403 for WM via their own role checks as well.
+const WM_ALLOWED = [
+  ['GET', /^\/api\/state$/],
+  ['GET', /^\/api\/health$/],
+  ['GET', /^\/api\/material-days$/],
+  ['POST', /^\/api\/material-days\/[^/]+\/issue$/],
+  ['POST', /^\/api\/material-days\/\d+\/check$/],
+];
+app.use('/api', (req, res, next) => {
+  const a = actorFrom(req);
+  // req.path is mount-relative inside app.use('/api'), so match on the full URL path.
+  const fullPath = req.originalUrl.split('?')[0];
+  if (isWarehouseManager(a) && !WM_ALLOWED.some(([m, re]) => req.method === m && re.test(fullPath))) {
+    return res.status(403).json({ error: WM_ONLY_ERROR });
+  }
+  next();
+});
+app.get('/api/state', (req, res) => res.json(fullState(actorFrom(req))));
 app.get('/api/health', (req, res) => res.json({ ok: true, today: dayStr(new Date()) }));
 
 // --- Tasks ---
@@ -423,7 +455,7 @@ app.post('/api/material-days/:date/issue', (req, res) => {
   }
   db.prepare('UPDATE material_days SET issuedById=? WHERE id=?').run(actor.id, day.id);
   logActivity(actor.id, null, `issued morning material for ${day.date} (${lines.length} lines)`);
-  res.json(fullState());
+  res.json(fullState(actor));
 });
 app.post('/api/material-days/:id/log', (req, res) => {
   const actor = requireActor(req, res); if (!actor) return;
@@ -467,7 +499,7 @@ app.post('/api/material-days/:id/check', (req, res) => {
   db.prepare(`UPDATE material_days SET status=?, checkedById=?, checkedAt=?, checkNote=? WHERE id=?`)
     .run(decision, actor.id, nowIso(), req.body.note || '', day.id);
   logActivity(actor.id, null, `${decision} daily material report for ${day.date}${req.body.note ? `: ${req.body.note}` : ''}`);
-  res.json(fullState());
+  res.json(fullState(actor));
 });
 
 // --- Per-task ad-hoc materials (no master catalog) ---
