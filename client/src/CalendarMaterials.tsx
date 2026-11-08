@@ -31,7 +31,7 @@ export function CalendarView({ ctx }: { ctx: ViewCtx }) {
   const [paste, setPaste] = useState('');
   const [preview, setPreview] = useState<ReturnType<typeof parseCsv> | null>(null);
   const [day, setDay] = useState<string | null>(null);
-  const personName = (id: number) => S.people.find((p) => p.id === id)?.name || '—';
+  const personName = (id: number) => S.people.find((p) => p.id === id)?.name || '–';
   const y = cursor.getFullYear(), m = cursor.getMonth();
   const first = new Date(y, m, 1), daysIn = new Date(y, m + 1, 0).getDate();
   const startDow = (first.getDay() + 6) % 7;
@@ -43,7 +43,7 @@ export function CalendarView({ ctx }: { ctx: ViewCtx }) {
   const dayDue = day ? S.tasks.filter((t) => t.dueDate === day) : [];
   return (
     <div>
-      <h2>{tr(lang, 'cal_title')} — {monthName}</h2>
+      <h2>{tr(lang, 'cal_title')} · {monthName}</h2>
       <p>
         <button className="btn" onClick={() => setCursor(new Date(y, m - 1, 1))}>{tr(lang, 'prev')}</button>{' '}
         <button className="btn" onClick={() => setCursor(new Date(y, m + 1, 1))}>{tr(lang, 'next')}</button>{' '}
@@ -60,7 +60,7 @@ export function CalendarView({ ctx }: { ctx: ViewCtx }) {
               onClick={() => setDay(ds)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDay(ds); } }}>
               <b>{d}</b>
-              {due.map((t) => <div key={t.id}>📌 <a href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); ctx.openTask(t.id); }}>{t.title.slice(0, 28)}</a></div>)}
+              {due.map((t) => <div key={t.id}>📌 <button type="button" className="linklike" onClick={(e) => { e.stopPropagation(); ctx.openTask(t.id); }}>{t.title.slice(0, 28)}</button></div>)}
               {sh.map((s) => <div key={s.id}>🕐 {personName(s.personId)} ({s.shiftName})</div>)}
             </div>
           );
@@ -70,11 +70,11 @@ export function CalendarView({ ctx }: { ctx: ViewCtx }) {
         <h3>{tr(lang, 'shift_import')}</h3>
         <p className="muted">{tr(lang, 'shift_import_help')}</p>
         <p><a className="btn" href="/api/shifts/template.csv">{tr(lang, 'download_template')}</a></p>
-        <p><input type="file" accept=".csv,text/csv" aria-label={tr(lang, 'shift_import')} onChange={(e) => {
+        <p><label className="sr-only" htmlFor="shift-file">{tr(lang, 'shift_import')}</label><input id="shift-file" type="file" accept=".csv,text/csv" aria-label={tr(lang, 'shift_import')} onChange={(e) => {
           const f = e.target.files?.[0]; if (!f) return;
           const r = new FileReader(); r.onload = () => setPaste(String(r.result)); r.readAsText(f);
         }} /></p>
-        <textarea rows={4} style={{ width: '100%' }} aria-label={tr(lang, 'shift_import')} placeholder="2026-11-08,Bima Prasetyo,Pagi,07:00,15:00,NOC," value={paste} onChange={(e) => setPaste(e.target.value)} />
+        <label className="sr-only" htmlFor="shift-paste">{tr(lang, 'shift_import')}</label><textarea id="shift-paste" rows={4} style={{ width: '100%' }} aria-label={tr(lang, 'shift_import')} placeholder="2026-11-08,Bima Prasetyo,Pagi,07:00,15:00,NOC," value={paste} onChange={(e) => setPaste(e.target.value)} />
         <p><button className="btn primary" onClick={() => {
           const rows = parseCsv(paste);
           if (!rows.length) { ctx.toast(tr(lang, 'nothing_to_import'), false); return; }
@@ -104,7 +104,7 @@ export function CalendarView({ ctx }: { ctx: ViewCtx }) {
         <h3>{tr(lang, 'onboard_pick')}</h3><p className="muted">{tr(lang, 'click_day')}</p>
         {day && <div>
           <h4>{day}</h4>
-          <p><b>{tr(lang, 'on_shift')}:</b> {dayShifts.length ? dayShifts.map((s) => `${personName(s.personId)} — ${s.shiftName} ${s.startTime}–${s.endTime}`).join(', ') : tr(lang, 'nobody')}</p>
+          <p><b>{tr(lang, 'on_shift')}:</b> {dayShifts.length ? dayShifts.map((s) => `${personName(s.personId)} · ${s.shiftName} ${s.startTime}–${s.endTime}`).join(', ') : tr(lang, 'nobody')}</p>
           <p><b>{tr(lang, 'tasks_due')}:</b> {dayDue.length ? dayDue.map((t) => t.title).join(', ') : tr(lang, 'none')}</p>
         </div>}
       </div>
@@ -115,7 +115,7 @@ export function CalendarView({ ctx }: { ctx: ViewCtx }) {
 export function MaterialsView({ ctx }: { ctx: ViewCtx }) {
   const { S, lang } = ctx;
   const actor = S.people.find((p) => p.id === ctx.actorId) || S.people[0];
-  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '—';
+  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '–';
   const days = useMemo(() => [...S.materialDays].sort((a, b) => b.date.localeCompare(a.date)), [S.materialDays]);
   const [newDayDate, setNewDayDate] = useState(todayStr());
   const [issueLines, setIssueLines] = useState([{ name: '', qty: '', unit: 'pcs' }]);
@@ -150,11 +150,11 @@ export function MaterialsView({ ctx }: { ctx: ViewCtx }) {
         const variance = tot.i - tot.u - tot.r;
         return (
           <div key={d.id} className="panel">
-            <h3>{d.date} — {tr(lang, 'status_col')}: {tStatus(lang, d.status)}{d.status === 'approved' ? ` (${tr(lang, 'checked_by')} ${personName(d.checkedById)})` : ''}{d.status === 'flagged' ? ` — ${d.checkNote}` : ''}</h3>
+            <h3>{d.date} · {tr(lang, 'status_col')}: {tStatus(lang, d.status)}{d.status === 'approved' ? ` (${tr(lang, 'checked_by')} ${personName(d.checkedById)})` : ''}{d.status === 'flagged' ? ` · ${d.checkNote}` : ''}</h3>
             <div className="table-wrap"><table><thead><tr><th>{tr(lang, 'th_item')}</th><th>{tr(lang, 'th_issued')}</th><th>{tr(lang, 'th_used')}</th><th>{tr(lang, 'th_returned')}</th><th>{tr(lang, 'th_variance')}</th><th>{tr(lang, 'th_where')}</th></tr></thead>
               <tbody>
                 {d.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return (
-                  <tr key={l.id}><td>{l.name}</td><td>{l.issuedQty} {l.unit}</td><td>{l.usedQty ?? '—'}</td><td>{l.returnedQty ?? '—'}</td><td className={v ? 'var-bad' : 'var-ok'}>{v}</td><td>{l.note || ''}</td></tr>
+                  <tr key={l.id}><td>{l.name}</td><td>{l.issuedQty} {l.unit}</td><td>{l.usedQty ?? '–'}</td><td>{l.returnedQty ?? '–'}</td><td className={v ? 'var-bad' : 'var-ok'}>{v}</td><td>{l.note || ''}</td></tr>
                 ); })}
                 <tr><td><b>{tr(lang, 'total')}</b></td><td><b>{tot.i}</b></td><td><b>{tot.u}</b></td><td><b>{tot.r}</b></td><td className={variance ? 'var-bad' : 'var-ok'}><b>{variance}</b></td><td></td></tr>
               </tbody></table></div>
@@ -166,7 +166,7 @@ export function MaterialsView({ ctx }: { ctx: ViewCtx }) {
                   const lv = getLog(l);
                   return (
                     <div key={l.id} className="mat-log-row">
-                      <label>{l.name} — {tr(lang, 'th_issued')} {l.issuedQty} {l.unit}</label>
+                      <label>{l.name} · {tr(lang, 'th_issued')} {l.issuedQty} {l.unit}</label>
                       <input type="number" min="0" step="any" style={{ width: 90 }} value={lv.used} aria-label={tr(lang, 'th_used')} placeholder={tr(lang, 'th_used')} onChange={(e) => setLog(l.id, { used: e.target.value })} />
                       <input type="number" min="0" step="any" style={{ width: 90 }} value={lv.ret} aria-label={tr(lang, 'th_returned')} placeholder={tr(lang, 'th_returned')} onChange={(e) => setLog(l.id, { ret: e.target.value })} />
                       <input type="text" style={{ width: 260 }} value={lv.note} aria-label={tr(lang, 'where_ph')} placeholder={tr(lang, 'where_ph')} onChange={(e) => setLog(l.id, { note: e.target.value })} />
@@ -207,9 +207,12 @@ export function MaterialsView({ ctx }: { ctx: ViewCtx }) {
         <div id="issueLines">
           {issueLines.map((l, i) => (
             <div key={i}>
-              <input className="il-name" list="matNames" aria-label={tr(lang, 'item_name_ph')} placeholder={tr(lang, 'item_name_ph')} value={l.name} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
-              <input className="il-qty" type="number" min="0" step="any" aria-label={tr(lang, 'qty_ph')} placeholder={tr(lang, 'qty_ph')} value={l.qty} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))} />
-              <input className="il-unit" aria-label={tr(lang, 'unit_ph')} placeholder={tr(lang, 'unit_ph')} value={l.unit} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, unit: e.target.value } : x))} />
+              <label className="sr-only" htmlFor={`issue-line-name-${i}`}>{tr(lang, 'item_name_ph')}</label>
+              <input id={`issue-line-name-${i}`} className="il-name" list="matNames" aria-label={tr(lang, 'item_name_ph')} placeholder={tr(lang, 'item_name_ph')} value={l.name} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
+              <label className="sr-only" htmlFor={`issue-line-qty-${i}`}>{tr(lang, 'qty_ph')}</label>
+              <input id={`issue-line-qty-${i}`} className="il-qty" type="number" min="0" step="any" aria-label={tr(lang, 'qty_ph')} placeholder={tr(lang, 'qty_ph')} value={l.qty} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))} />
+              <label className="sr-only" htmlFor={`issue-line-unit-${i}`}>{tr(lang, 'unit_ph')}</label>
+              <input id={`issue-line-unit-${i}`} className="il-unit" aria-label={tr(lang, 'unit_ph')} placeholder={tr(lang, 'unit_ph')} value={l.unit} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, unit: e.target.value } : x))} />
             </div>
           ))}
         </div>
@@ -234,9 +237,12 @@ function IssueMore({ dayId, date, ctx }: { dayId: number; date: string; ctx: Vie
     <div>
       <h4>{tr(lang, 'issue_more_h')}</h4>
       <div className="issue-row">
-        <input list="matNames" aria-label={tr(lang, 'item_name_ph')} placeholder={tr(lang, 'item_name_ph')} style={{ width: 200 }} value={name} onChange={(e) => setName(e.target.value)} />
-        <input type="number" min="0" step="any" aria-label={tr(lang, 'qty_ph')} placeholder={tr(lang, 'qty_ph')} style={{ width: 80 }} value={qty} onChange={(e) => setQty(e.target.value)} />
-        <input aria-label={tr(lang, 'unit_ph')} placeholder={tr(lang, 'unit_ph')} style={{ width: 70 }} value={unit} onChange={(e) => setUnit(e.target.value)} />
+        <label className="sr-only" htmlFor="issuemore-name">{tr(lang, 'item_name_ph')}</label>
+        <input id="issuemore-name" list="matNames" aria-label={tr(lang, 'item_name_ph')} placeholder={tr(lang, 'item_name_ph')} style={{ width: 200 }} value={name} onChange={(e) => setName(e.target.value)} />
+        <label className="sr-only" htmlFor="issuemore-qty">{tr(lang, 'qty_ph')}</label>
+        <input id="issuemore-qty" type="number" min="0" step="any" aria-label={tr(lang, 'qty_ph')} placeholder={tr(lang, 'qty_ph')} style={{ width: 80 }} value={qty} onChange={(e) => setQty(e.target.value)} />
+        <label className="sr-only" htmlFor="issuemore-unit">{tr(lang, 'unit_ph')}</label>
+        <input id="issuemore-unit" aria-label={tr(lang, 'unit_ph')} placeholder={tr(lang, 'unit_ph')} style={{ width: 70 }} value={unit} onChange={(e) => setUnit(e.target.value)} />
         <button className="btn" onClick={async () => {
           try { const s = await api(`/api/material-days/${date}/issue`, 'POST', { lines: [{ name, qty: Number(qty), unit: unit || 'pcs' }] }, ctx.actorId); ctx.setState(s); ctx.toast(tr(lang, 'issued_toast')); setName(''); setQty(''); } catch (e: any) { ctx.toast(e.message, false); }
         }}>{tr(lang, 'issue_btn')}</button>

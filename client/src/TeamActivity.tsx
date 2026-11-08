@@ -19,12 +19,12 @@ export function TeamView({ S, lang }: { S: State; lang: Lang }) {
 }
 
 export function ActivityView({ S, lang }: { S: State; lang: Lang }) {
-  const personName = (id: number | null) => S.people.find((p) => p.id === id)?.name || '—';
+  const personName = (id: number | null) => S.people.find((p) => p.id === id)?.name || '–';
   return (
     <div>
       <h2>{tr(lang, 'activity_title')}</h2>
       <div className="panel"><ul>
-        {S.activity.map((a) => <li key={a.id}><b>{personName(a.actorId)}</b> — {a.text} <span className="muted">({new Date(a.createdAt).toLocaleString(lang === 'id' ? 'id-ID' : 'en-GB')})</span></li>)}
+        {S.activity.map((a) => <li key={a.id}><b>{personName(a.actorId)}</b> · {a.text} <span className="muted">({new Date(a.createdAt).toLocaleString(lang === 'id' ? 'id-ID' : 'en-GB')})</span></li>)}
       </ul></div>
     </div>
   );

@@ -44,7 +44,7 @@ export function TaskDetail({ task, ctx }: { task: Task; ctx: ModalCtx }) {
       (prevFocusRef.current as HTMLElement | null)?.focus?.();
     };
   }, [lightbox]);
-  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '—';
+  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '–';
 
   const uploadFiles = async (list: FileList | null, category: 'evidence' | 'file') => {
     if (!list) return;
@@ -62,11 +62,11 @@ export function TaskDetail({ task, ctx }: { task: Task; ctx: ModalCtx }) {
   return (
     <div>
       <h2>{task.title}</h2>
-      <p className="muted">{tKind(lang, task.taskKind)} · {tDept(lang, task.department || '')} · {tCol(lang, col.name)} · {tr(lang, 'priority_word')}: {tPri(lang, task.priority)} · {tr(lang, 'due_prefix')}: {task.dueDate || '—'}</p>
+      <p className="muted">{tKind(lang, task.taskKind)} · {tDept(lang, task.department || '')} · {tCol(lang, col.name)} · {tr(lang, 'priority_word')}: {tPri(lang, task.priority)} · {tr(lang, 'due_prefix')}: {task.dueDate || '–'}</p>
       <p>{task.description || ''}</p>
-      <p className="muted">{tr(lang, 'customer_word')}: {task.customer || '—'} · {tr(lang, 'location_label')}: {task.location || '—'} · {tr(lang, 'service_label')}: {task.serviceId || '—'} · {tr(lang, 'dropped_by')}: {personName(task.createdById)} · {tr(lang, 'assigned_to')}: {personName(task.assigneeId)}</p>
+      <p className="muted">{tr(lang, 'customer_word')}: {task.customer || '–'} · {tr(lang, 'location_label')}: {task.location || '–'} · {tr(lang, 'service_label')}: {task.serviceId || '–'} · {tr(lang, 'dropped_by')}: {personName(task.createdById)} · {tr(lang, 'assigned_to')}: {personName(task.assigneeId)}</p>
       {isReview && (ev.length
-        ? <div className="okbox">{tr(lang, 'evidence_attached')}: {ev.length} {lang === 'id' ? 'foto' : 'photo(s)'} — {tr(lang, 'evidence_review')}</div>
+        ? <div className="okbox">{tr(lang, 'evidence_attached')}: {ev.length} {lang === 'id' ? 'foto' : 'photo(s)'} · {tr(lang, 'evidence_review')}</div>
         : <div className="warnbox"><b>⚠ {tr(lang, 'no_evidence_warn')}</b> {tr(lang, 'no_evidence_warn2')}</div>)}
       {isReview && (
         <p>
@@ -111,11 +111,11 @@ export function TaskDetail({ task, ctx }: { task: Task; ctx: ModalCtx }) {
           <button key={c} type="button" onClick={() => setCaption(c)}>{c}</button>
         ))}
       </div>
-      <p><input type="file" accept="image/*" multiple aria-label={tr(lang, 'evidence_photos')} onChange={(e) => uploadFiles(e.target.files, 'evidence')} /> <span className="muted">{tr(lang, 'caption_label')} <b>{caption || tr(lang, 'caption_blank')}</b> {tr(lang, 'caption_hint')}</span></p>
+      <p><label className="sr-only" htmlFor="evidence-file">{tr(lang, 'evidence_photos')}</label><input id="evidence-file" type="file" accept="image/*" multiple aria-label={tr(lang, 'evidence_photos')} onChange={(e) => uploadFiles(e.target.files, 'evidence')} /> <span className="muted">{tr(lang, 'caption_label')} <b>{caption || tr(lang, 'caption_blank')}</b> {tr(lang, 'caption_hint')}</span></p>
 
       <h3>{tr(lang, 'mat_adhoc')}</h3>
       <ul>{task.materials.length ? task.materials.map((m) => (
-        <li key={m.id}>{m.name} — {m.qty} {m.unit}{m.serial ? ` · SN ${m.serial}` : ''} ({m.direction}){m.note ? ` · ${m.note}` : ''}</li>
+        <li key={m.id}>{m.name} · {m.qty} {m.unit}{m.serial ? ` · SN ${m.serial}` : ''} ({m.direction}){m.note ? ` · ${m.note}` : ''}</li>
       )) : <li className="muted">{tr(lang, 'no_mat_task')}</li>}</ul>
       <AddMaterial task={task} ctx={ctx} />
 
@@ -126,7 +126,7 @@ export function TaskDetail({ task, ctx }: { task: Task; ctx: ModalCtx }) {
           try { const s = await api(`/api/files/${f.id}`, 'DELETE', {}, ctx.actorId); ctx.setState(s); } catch (e: any) { ctx.toast(e.message, false); }
         }}>✕</button></li>
       )) : <li className="muted">{tr(lang, 'no_files')}</li>}</ul>
-      <p><input type="file" id="fileInput" aria-label={tr(lang, 'attach_file')} /> <button className="btn" onClick={async () => {
+      <p><label className="sr-only" htmlFor="fileInput">{tr(lang, 'attach_file')}</label><input type="file" id="fileInput" aria-label={tr(lang, 'attach_file')} /> <button className="btn" onClick={async () => {
         const input = document.getElementById('fileInput') as HTMLInputElement | null;
         const f = input?.files?.[0]; if (!f) { ctx.toast(tr(lang, 'pick_file'), false); return; }
         const data = await readFileAsDataUrl(f);
@@ -153,11 +153,16 @@ function AddMaterial({ task, ctx }: { task: Task; ctx: ModalCtx }) {
   const [serial, setSerial] = useState(''); const [note, setNote] = useState('');
   return (
     <p className="adhoc-row">
-      <input list="matNames2" aria-label={tr(lang, 'item_name_ph')} placeholder={tr(lang, 'item_name_ph')} style={{ width: 180 }} value={name} onChange={(e) => setName(e.target.value)} />
-      <input type="number" min="0" step="any" aria-label={tr(lang, 'qty_ph')} placeholder={tr(lang, 'qty_ph')} style={{ width: 80 }} value={qty} onChange={(e) => setQty(e.target.value)} />
-      <input aria-label={tr(lang, 'unit_ph')} placeholder={tr(lang, 'unit_ph')} style={{ width: 70 }} value={unit} onChange={(e) => setUnit(e.target.value)} />
-      <input aria-label={tr(lang, 'serial_ph')} placeholder={tr(lang, 'serial_ph')} style={{ width: 150 }} value={serial} onChange={(e) => setSerial(e.target.value)} />
-      <input aria-label={tr(lang, 'where_task_ph')} placeholder={tr(lang, 'where_task_ph')} style={{ width: 220 }} value={note} onChange={(e) => setNote(e.target.value)} />
+      <label className="sr-only" htmlFor="adhoc-name">{tr(lang, 'item_name_ph')}</label>
+      <input id="adhoc-name" list="matNames2" aria-label={tr(lang, 'item_name_ph')} placeholder={tr(lang, 'item_name_ph')} style={{ width: 180 }} value={name} onChange={(e) => setName(e.target.value)} />
+      <label className="sr-only" htmlFor="adhoc-qty">{tr(lang, 'qty_ph')}</label>
+      <input id="adhoc-qty" type="number" min="0" step="any" aria-label={tr(lang, 'qty_ph')} placeholder={tr(lang, 'qty_ph')} style={{ width: 80 }} value={qty} onChange={(e) => setQty(e.target.value)} />
+      <label className="sr-only" htmlFor="adhoc-unit">{tr(lang, 'unit_ph')}</label>
+      <input id="adhoc-unit" aria-label={tr(lang, 'unit_ph')} placeholder={tr(lang, 'unit_ph')} style={{ width: 70 }} value={unit} onChange={(e) => setUnit(e.target.value)} />
+      <label className="sr-only" htmlFor="adhoc-serial">{tr(lang, 'serial_ph')}</label>
+      <input id="adhoc-serial" aria-label={tr(lang, 'serial_ph')} placeholder={tr(lang, 'serial_ph')} style={{ width: 150 }} value={serial} onChange={(e) => setSerial(e.target.value)} />
+      <label className="sr-only" htmlFor="adhoc-note">{tr(lang, 'where_task_ph')}</label>
+      <input id="adhoc-note" aria-label={tr(lang, 'where_task_ph')} placeholder={tr(lang, 'where_task_ph')} style={{ width: 220 }} value={note} onChange={(e) => setNote(e.target.value)} />
       <button className="btn" onClick={async () => {
         const q = Number(qty);
         if (!name.trim() || !(q > 0)) { ctx.toast(tr(lang, 'mat_required'), false); return; }

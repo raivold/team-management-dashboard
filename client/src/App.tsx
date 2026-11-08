@@ -71,7 +71,7 @@ export default function App() {
   useEffect(() => {
     if (!S) return;
     const shown: View = S.people.find((p) => p.id === actorId)?.role === 'warehouse_manager' ? 'materials' : view;
-    document.title = `Team Management Dashboard — ${tr(lang, 'nav_' + shown)}`;
+    document.title = `Team Management Dashboard · ${tr(lang, 'nav_' + shown)}`;
     if (prevViewRef.current !== null && prevViewRef.current !== shown) mainRef.current?.focus();
     prevViewRef.current = shown;
   }, [S, view, lang, actorId]);
@@ -102,7 +102,7 @@ export default function App() {
   const actor = S.people.find((p) => p.id === actorId) || S.people[0];
   const isWM = actor.role === 'warehouse_manager';
   const currentView: View = isWM ? 'materials' : view;
-  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '—';
+  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '–';
   const colById = (id: number) => S.columns.find((c) => c.id === id);
   const canApproveTask = (t: Task) => actor.role === 'head_noc' || (actor.role === 'osp' && t.createdById === actor.id);
 
@@ -160,7 +160,7 @@ export default function App() {
             refresh(id).catch((err: any) => toast(err.message, false));
           }}>
             {S.people.filter((p) => p.active && p.role !== 'field_tech').map((p) => (
-              <option key={p.id} value={p.id}>{p.name} — {tDept(lang, p.department)}</option>
+              <option key={p.id} value={p.id}>{p.name} · {tDept(lang, p.department)}</option>
             ))}
           </select>
           <span className="role-pill">{tDept(lang, actor.department)} · {tRole(lang, actor.role)}</span>
@@ -185,7 +185,7 @@ export default function App() {
                 const name = window.prompt(tr(lang, 'new_col_name')); if (!name) return;
                 try { const s = await api('/api/columns', 'POST', { name }, actorId); setS(s); } catch (e: any) { toast(e.message, false); }
               }}>{tr(lang, 'add_column')}</button>
-              <input className="filter" aria-label={tr(lang, 'filter_ph')} placeholder={tr(lang, 'filter_ph')} value={boardFilter} onChange={(e) => setBoardFilter(e.target.value)} />
+              <label className="sr-only" htmlFor="board-filter">{tr(lang, 'filter_ph')}</label><input id="board-filter" className="filter" aria-label={tr(lang, 'filter_ph')} placeholder={tr(lang, 'filter_ph')} value={boardFilter} onChange={(e) => setBoardFilter(e.target.value)} />
             </div>
             <Board S={S} lang={lang} filter={boardFilter} openTask={openTask} moveTask={moveTask} newTask={(colId) => setModal({ kind: 'new', columnId: colId })} toast={toast} setState={setS} actorId={actorId} />
           </section>
@@ -220,7 +220,7 @@ export default function App() {
 // ---- Overview ----
 function Overview({ S, lang, openTask }: { S: State; lang: Lang; openTask: (id: number) => void }) {
   const t = todayStr(), y = ydayStr();
-  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '—';
+  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '–';
   const colById = (id: number) => S.columns.find((c) => c.id === id);
   const doneY = S.tasks.filter((x) => x.completedAt && x.completedAt.slice(0, 10) === y);
   const dueT = S.tasks.filter((x) => x.dueDate === t && colById(x.columnId)?.kind !== 'done');
@@ -242,20 +242,20 @@ function Overview({ S, lang, openTask }: { S: State; lang: Lang; openTask: (id: 
         <div className={`card ${attention.length ? 'warn' : ''}`}><div className="big">{attention.length}</div><div className="label">{tr(lang, 'needs_attention')}</div></div>
       </div>
       <div className="panel"><h3>{tr(lang, 'done_yesterday_h')}</h3>
-        {doneY.length ? <ul>{doneY.map((x) => <li key={x.id}>{x.title} — {personName(x.assigneeId)}</li>)}</ul> : <p className="muted">{tr(lang, 'nothing_done_yday')}</p>}
+        {doneY.length ? <ul>{doneY.map((x) => <li key={x.id}>{x.title} · {personName(x.assigneeId)}</li>)}</ul> : <p className="muted">{tr(lang, 'nothing_done_yday')}</p>}
       </div>
       <div className="panel"><h3>{tr(lang, 'due_today_h')}</h3>
-        {dueT.length ? <ul>{dueT.map((x) => <li key={x.id}><a href="#" onClick={(e) => { e.preventDefault(); openTask(x.id); }}>{x.title}</a> — {personName(x.assigneeId)} · {x.location || ''}</li>)}</ul> : <p className="muted">{tr(lang, 'nothing_due_today')}</p>}
-        {overdue.length > 0 && <><h3>{tr(lang, 'overdue_h')}</h3><ul>{overdue.map((x) => <li key={x.id}>{x.title} — {tr(lang, 'due_prefix')} {x.dueDate}</li>)}</ul></>}
+        {dueT.length ? <ul>{dueT.map((x) => <li key={x.id}><button type="button" className="linklike" onClick={() => openTask(x.id)}>{x.title}</button> · {personName(x.assigneeId)} · {x.location || ''}</li>)}</ul> : <p className="muted">{tr(lang, 'nothing_due_today')}</p>}
+        {overdue.length > 0 && <><h3>{tr(lang, 'overdue_h')}</h3><ul>{overdue.map((x) => <li key={x.id}>{x.title} · {tr(lang, 'due_prefix')} {x.dueDate}</li>)}</ul></>}
       </div>
       <div className="panel"><h3>{tr(lang, 'onboard_h')} ({t})</h3>
-        {onShift.length ? <ul>{onShift.map((s) => <li key={s.id}>{personName(s.personId)} — {s.shiftName} {s.startTime}–{s.endTime} ({tDept(lang, s.department)})</li>)}</ul> : <p className="muted">{tr(lang, 'no_shifts_today')}</p>}
+        {onShift.length ? <ul>{onShift.map((s) => <li key={s.id}>{personName(s.personId)} · {s.shiftName} {s.startTime}–{s.endTime} ({tDept(lang, s.department)})</li>)}</ul> : <p className="muted">{tr(lang, 'no_shifts_today')}</p>}
       </div>
       <div className="panel"><h3>{tr(lang, 'mat_out_yday')}</h3>
         {matY ? <>
           <div className="table-wrap"><table><thead><tr><th>{tr(lang, 'th_item')}</th><th>{tr(lang, 'th_issued')}</th><th>{tr(lang, 'th_used')}</th><th>{tr(lang, 'th_returned')}</th><th>{tr(lang, 'th_variance')}</th><th>{tr(lang, 'th_where')}</th></tr></thead>
             <tbody>{matY.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return (
-              <tr key={l.id}><td>{l.name}</td><td>{l.issuedQty} {l.unit}</td><td>{l.usedQty ?? '—'}</td><td>{l.returnedQty ?? '—'}</td><td className={v ? 'var-bad' : 'var-ok'}>{v}</td><td>{l.note || ''}</td></tr>
+              <tr key={l.id}><td>{l.name}</td><td>{l.issuedQty} {l.unit}</td><td>{l.usedQty ?? '–'}</td><td>{l.returnedQty ?? '–'}</td><td className={v ? 'var-bad' : 'var-ok'}>{v}</td><td>{l.note || ''}</td></tr>
             ); })}</tbody></table></div>
           <p className="muted">{tr(lang, 'status_label')}: {tStatus(lang, matY.status)}{matY.status === 'approved' ? ' ' + tr(lang, 'by_label') + ' ' + personName(matY.checkedById) : ''}</p>
         </> : <p className="muted">{tr(lang, 'no_mat_yday')}</p>}
@@ -268,7 +268,7 @@ function Overview({ S, lang, openTask }: { S: State; lang: Lang; openTask: (id: 
 function TaskCard({ task, S, lang, openTask, moveTask }: { task: Task; S: State; lang: Lang; openTask: (id: number) => void; moveTask: (id: number, columnId: number) => Promise<void> }) {
   const ev = task.files.filter((f) => f.category === 'evidence').length;
   const col = S.columns.find((c) => c.id === task.columnId)!;
-  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '—';
+  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '–';
   return (
     <div className="task" draggable data-id={task.id} tabIndex={0} role="button" aria-label={task.title}
       onClick={(e) => { if ((e.target as HTMLElement).closest('select,input,button,textarea')) return; openTask(task.id); }}
@@ -284,7 +284,7 @@ function TaskCard({ task, S, lang, openTask, moveTask }: { task: Task; S: State;
       <div className="m">{personName(task.assigneeId)} · {task.department || ''}</div>
       {ev > 0 && <div className="badge-cam">📷 {ev} {lang === 'id' ? 'foto bukti' : 'evidence'}</div>}
       <div className="m">
-        <select className="move-to" value="" onChange={(e) => { if (e.target.value) moveTask(task.id, Number(e.target.value)); }} onClick={(e) => e.stopPropagation()}>
+        <select className="move-to" aria-label={tr(lang, 'move_to_label')} value="" onChange={(e) => { if (e.target.value) moveTask(task.id, Number(e.target.value)); }} onClick={(e) => e.stopPropagation()}>
           <option value="">{tr(lang, 'move_to')}</option>
           {S.columns.map((c) => <option key={c.id} value={c.id} disabled={c.id === col.id}>{tCol(lang, c.name)}</option>)}
         </select>
@@ -300,7 +300,7 @@ function Board({ S, lang, filter, openTask, moveTask, newTask, toast, setState, 
   setState: (s: State) => void; actorId: number;
 }) {
   const q = filter.toLowerCase();
-  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '—';
+  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '–';
   const tasks = S.tasks.filter((t) => !q || [t.title, t.customer, t.location, t.serviceId, personName(t.assigneeId)].join(' ').toLowerCase().includes(q));
   return (
     <div className="board">
@@ -336,7 +336,7 @@ function Board({ S, lang, filter, openTask, moveTask, newTask, toast, setState, 
 
 // ---- To-Do ----
 function Todo({ S, lang, openTask }: { S: State; lang: Lang; openTask: (id: number) => void }) {
-  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '—';
+  const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '–';
   const colById = (id: number) => S.columns.find((c) => c.id === id);
   const groups: Record<string, Task[]> = {};
   for (const t of S.tasks) { const k = personName(t.assigneeId); (groups[k] = groups[k] || []).push(t); }
@@ -346,7 +346,7 @@ function Todo({ S, lang, openTask }: { S: State; lang: Lang; openTask: (id: numb
       {Object.entries(groups).map(([who, list]) => (
         <div key={who} className="panel"><h3>{who}</h3>
           <ul>{list.map((t) => <li key={t.id}>
-            <a href="#" onClick={(e) => { e.preventDefault(); openTask(t.id); }}>{t.title}</a> — {colById(t.columnId) ? tCol(lang, colById(t.columnId)!.name) : ''}
+            <button type="button" className="linklike" onClick={() => openTask(t.id)}>{t.title}</button> · {colById(t.columnId) ? tCol(lang, colById(t.columnId)!.name) : ''}
             {t.dueDate ? ` · ${tr(lang, 'due_prefix')} ${t.dueDate}` : ''} <span className={`pill ${t.priority === 'high' || t.priority === 'urgent' ? t.priority : ''}`}>{tPri(lang, t.priority)}</span>
           </li>)}</ul>
         </div>

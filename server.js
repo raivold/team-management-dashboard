@@ -102,7 +102,7 @@ function canApprove(actor, task) {
 }
 function approvalHint(actor, task) {
   if (actor?.role === 'osp' && task.createdById !== actor.id)
-    return 'OSP can only approve tasks they dropped themselves — this one was dropped by ' +
+    return 'OSP can only approve tasks they dropped themselves. This one was dropped by ' +
       (getPerson(task.createdById)?.name || 'someone else') + '.';
   return 'Only Head NOC can approve anything; OSP only their own dropped tasks.';
 }
@@ -143,45 +143,45 @@ function seedIfEmpty() {
     o.serviceId || '', o.priority || 'normal', o.dueDate || null, o.department || '',
     o.taskKind || 'ticket', o.assigneeId ?? null, o.createdById ?? null, o.columnId,
     o.completedAt || null, nowIso(), nowIso());
-  T({ title: 'Install baru FTTH — Ibu Ratna', description: 'Tarik drop cable dari ODP terdekat, aktivasi PPPoE, test speed di lokasi.',
+  T({ title: 'Install baru FTTH · Ibu Ratna', description: 'Tarik drop cable dari ODP terdekat, aktivasi PPPoE, test speed di lokasi.',
     customer: 'Ratna Wijaya', location: 'Binong, Subang', serviceId: 'SWN-2026-1187', dueDate: D.y,
     department: 'Field', assigneeId: 5, createdById: 2, columnId: colId('Done'), completedAt: D.y + 'T15:40:00.000Z' });
-  T({ title: 'Perbaikan LOS — Bapak Dedi, Jatiroke', description: 'Redaman tinggi di ODP, cek splicing dan ganti pigtail bila perlu.',
+  T({ title: 'Perbaikan LOS · Bapak Dedi, Jatiroke', description: 'Redaman tinggi di ODP, cek splicing dan ganti pigtail bila perlu.',
     customer: 'Dedi Supriadi', location: 'Jatiroke, Sumedang', serviceId: 'SWN-2026-0931', priority: 'high',
     dueDate: D.y, department: 'Field', assigneeId: 6, createdById: 4, columnId: colId('Done'), completedAt: D.y + 'T13:05:00.000Z' });
-  T({ title: 'Ganti ONT rusak — Bapak Haji Oman', description: 'ONT lama mati total (power adapter terbakar). Bawa ONT pengganti dan adapter baru.',
+  T({ title: 'Ganti ONT rusak · Bapak Haji Oman', description: 'ONT lama mati total (power adapter terbakar). Bawa ONT pengganti dan adapter baru.',
     customer: 'H. Oman Suryana', location: 'Cisalak, Subang', serviceId: 'SWN-2026-0744',
     dueDate: D.t, department: 'Field', assigneeId: 7, createdById: 4, columnId: colId('To Do') });
-  T({ title: 'Project: Pasang ODP baru — Cibogo', description: 'OSP project: pasang ODP 1:16 baru, tarik distribusi 300 m, splice dan label port. Dropped by OSP — OSP can approve this one themselves, NOC cannot.',
+  T({ title: 'Project: Pasang ODP baru · Cibogo', description: 'OSP project: pasang ODP 1:16 baru, tarik distribusi 300 m, splice dan label port. Dropped by OSP. OSP can approve this one themselves, NOC cannot.',
     location: 'Cibogo', priority: 'high', dueDate: D.t2, department: 'OSP', taskKind: 'project',
     assigneeId: 5, createdById: 9, columnId: colId('Pending Approval') });
-  T({ title: 'Migrasi pelanggan ke VLAN baru — Cluster Cipunagara', description: 'Pindahkan 12 pelanggan dari VLAN 210 ke VLAN 312, update PPPoE profile di router agregasi.',
+  T({ title: 'Migrasi pelanggan ke VLAN baru · Cluster Cipunagara', description: 'Pindahkan 12 pelanggan dari VLAN 210 ke VLAN 312, update PPPoE profile di router agregasi.',
     location: 'Cipunagara, Subang', dueDate: D.t, department: 'NOC', taskKind: 'maintenance',
     assigneeId: 3, createdById: 3, columnId: colId('Pending Approval') });
-  T({ title: 'Cek redaman OLT port 3 — POP Binong', description: 'Rx power beberapa ONT di port ini di bawah -27 dBm. Cek splitter dan patch cord di ODF.',
+  T({ title: 'Cek redaman OLT port 3 · POP Binong', description: 'Rx power beberapa ONT di port ini di bawah -27 dBm. Cek splitter dan patch cord di ODF.',
     location: 'POP Binong', priority: 'high', dueDate: D.t, department: 'NOC', taskKind: 'maintenance',
     assigneeId: 3, createdById: 2, columnId: colId('In Progress') });
-  T({ title: 'Handover shift malam — pantau OLT Binong', description: 'NOC handover for the oncoming night shift: pantau OLT Binong, follow up alarm bila ada.',
+  T({ title: 'Handover shift malam · pantau OLT Binong', description: 'NOC handover for the oncoming night shift: pantau OLT Binong, follow up alarm bila ada.',
     dueDate: D.t2, department: 'NOC', taskKind: 'handover', assigneeId: 2, createdById: 2, columnId: colId('To Do') });
-  T({ title: 'Install baru — Warnet Berkah Net', description: 'Pelanggan usaha, minta bandwidth 50 Mbps dedicated. Survey lokasi dulu untuk jalur kabel.',
+  T({ title: 'Install baru · Warnet Berkah Net', description: 'Pelanggan usaha, minta bandwidth 50 Mbps dedicated. Survey lokasi dulu untuk jalur kabel.',
     customer: 'Berkah Net (Pak Yudi)', location: 'Subang Kota', serviceId: 'SWN-2026-1201', priority: 'urgent',
     dueDate: D.t2, department: 'Field', taskKind: 'project', assigneeId: 6, createdById: 9, columnId: colId('To Do') });
-  T({ title: 'Tarik kabel backbone — Jl. Raya Pagaden', description: 'Menunggu izin penanaman tiang dari desa. Follow up Kamis.',
+  T({ title: 'Tarik kabel backbone · Jl. Raya Pagaden', description: 'Menunggu izin penanaman tiang dari desa. Follow up Kamis.',
     location: 'Pagaden, Subang', dueDate: D.t4, department: 'Field', taskKind: 'project',
     assigneeId: 5, createdById: 9, columnId: colId('Waiting') });
-  T({ title: 'Audit uplink POP — cek utilisasi LAG', description: 'Upload traffic menumpuk di satu interface LAG. Cek hash distribution di CRS dan router.',
+  T({ title: 'Audit uplink POP · cek utilisasi LAG', description: 'Upload traffic menumpuk di satu interface LAG. Cek hash distribution di CRS dan router.',
     location: 'POP Binong', priority: 'high', dueDate: D.t3, department: 'NOC', taskKind: 'maintenance',
     assigneeId: 2, createdById: 1, columnId: colId('Backlog') });
 
   // Per-task ad-hoc materials on the two completed jobs.
   const insM = db.prepare(`INSERT INTO task_materials (taskId,name,qty,unit,serial,direction,createdById,createdAt) VALUES (?,?,?,?,?,?,?,?)`);
   const tid = (title) => db.prepare('SELECT id FROM tasks WHERE title=?').get(title).id;
-  insM.run(tid('Install baru FTTH — Ibu Ratna'), 'ONT ZTE F660', 1, 'pcs', 'ZTEGC8A41F02', 'out', 5, nowIso());
-  insM.run(tid('Install baru FTTH — Ibu Ratna'), 'Drop cable', 60, 'm', '', 'out', 5, nowIso());
-  insM.run(tid('Install baru FTTH — Ibu Ratna'), 'Konektor SC/APC', 2, 'pcs', '', 'out', 5, nowIso());
-  insM.run(tid('Perbaikan LOS — Bapak Dedi, Jatiroke'), 'Pigtail SC/APC', 1, 'pcs', '', 'out', 6, nowIso());
-  insM.run(tid('Perbaikan LOS — Bapak Dedi, Jatiroke'), 'Sleeve protector', 2, 'pcs', '', 'out', 6, nowIso());
-  insM.run(tid('Ganti ONT rusak — Bapak Haji Oman'), 'ONT Huawei HG8245H', 1, 'pcs', '', 'out', 7, nowIso());
+  insM.run(tid('Install baru FTTH · Ibu Ratna'), 'ONT ZTE F660', 1, 'pcs', 'ZTEGC8A41F02', 'out', 5, nowIso());
+  insM.run(tid('Install baru FTTH · Ibu Ratna'), 'Drop cable', 60, 'm', '', 'out', 5, nowIso());
+  insM.run(tid('Install baru FTTH · Ibu Ratna'), 'Konektor SC/APC', 2, 'pcs', '', 'out', 5, nowIso());
+  insM.run(tid('Perbaikan LOS · Bapak Dedi, Jatiroke'), 'Pigtail SC/APC', 1, 'pcs', '', 'out', 6, nowIso());
+  insM.run(tid('Perbaikan LOS · Bapak Dedi, Jatiroke'), 'Sleeve protector', 2, 'pcs', '', 'out', 6, nowIso());
+  insM.run(tid('Ganti ONT rusak · Bapak Haji Oman'), 'ONT Huawei HG8245H', 1, 'pcs', '', 'out', 7, nowIso());
 
   const insS = db.prepare('INSERT INTO shifts (personId,date,shiftName,startTime,endTime,department,notes) VALUES (?,?,?,?,?,?,?)');
   insS.run(5, D.y, 'Pagi', '07:00', '15:00', 'Field', '');
@@ -215,11 +215,11 @@ function seedIfEmpty() {
     ['Splitter 1:8', 'pcs', 1], ['Konektor SC/APC', 'pcs', 10]]) {
     insL.run(dayId(D.t), n, u, iq, null, null, '', 8, nowIso(), nowIso());
   }
-  logActivity(10, null, `submitted daily material report for ${D.y} — awaiting Warehouse check`);
+  logActivity(10, null, `submitted daily material report for ${D.y}, awaiting Warehouse check`);
   logActivity(8, null, `issued morning material for ${D.y} (demo cycle)`);
-  logActivity(3, 5, 'moved “Migrasi pelanggan ke VLAN baru — Cluster Cipunagara” to Pending Approval');
-  logActivity(6, 2, 'completed “Perbaikan LOS — Bapak Dedi, Jatiroke”');
-  logActivity(5, 1, 'completed “Install baru FTTH — Ibu Ratna”');
+  logActivity(3, 5, 'moved “Migrasi pelanggan ke VLAN baru · Cluster Cipunagara” to Pending Approval');
+  logActivity(6, 2, 'completed “Perbaikan LOS · Bapak Dedi, Jatiroke”');
+  logActivity(5, 1, 'completed “Install baru FTTH · Ibu Ratna”');
 }
 seedIfEmpty();
 
@@ -522,10 +522,10 @@ app.post('/api/material-days/:id/submit', (req, res) => {
   if (day.status !== 'open') return res.status(400).json({ error: `Material day ${day.date} is ${day.status}.` });
   const pending = db.prepare('SELECT name FROM daily_lines WHERE dayId=? AND (usedQty IS NULL OR returnedQty IS NULL)').all(day.id);
   if (pending.length)
-    return res.status(400).json({ error: `Cannot submit yet — ${pending.length} line(s) still unlogged: ${pending.map((p) => p.name).join(', ')}.` });
+    return res.status(400).json({ error: `Cannot submit yet. ${pending.length} line(s) still unlogged: ${pending.map((p) => p.name).join(', ')}.` });
   db.prepare('UPDATE material_days SET status=?, submittedById=?, submittedAt=? WHERE id=?')
     .run('submitted', actor.id, nowIso(), day.id);
-  logActivity(actor.id, null, `submitted daily material report for ${day.date} — awaiting Warehouse check`);
+  logActivity(actor.id, null, `submitted daily material report for ${day.date}, awaiting Warehouse check`);
   res.json(fullState());
 });
 app.post('/api/material-days/:id/check', (req, res) => {
