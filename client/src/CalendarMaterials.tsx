@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { api } from './api';
 import {
   tr, tCol, tDept, tStatus, todayStr,
-  type Lang, type State,
+  type Lang, type MaterialDay, type State,
 } from './lib';
 
 export interface ViewCtx {
@@ -56,7 +56,9 @@ export function CalendarView({ ctx }: { ctx: ViewCtx }) {
           const due = S.tasks.filter((t) => t.dueDate === ds);
           const sh = S.shifts.filter((s) => s.date === ds);
           return (
-            <div key={ds} className={`day ${ds === todayStr() ? 'today' : ''}`} onClick={() => setDay(ds)}>
+            <div key={ds} className={`day ${ds === todayStr() ? 'today' : ''}`} tabIndex={0} role="button" aria-label={ds}
+              onClick={() => setDay(ds)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDay(ds); } }}>
               <b>{d}</b>
               {due.map((t) => <div key={t.id}>📌 <a href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); ctx.openTask(t.id); }}>{t.title.slice(0, 28)}</a></div>)}
               {sh.map((s) => <div key={s.id}>🕐 {personName(s.personId)} ({s.shiftName})</div>)}
@@ -68,11 +70,11 @@ export function CalendarView({ ctx }: { ctx: ViewCtx }) {
         <h3>{tr(lang, 'shift_import')}</h3>
         <p className="muted">{tr(lang, 'shift_import_help')}</p>
         <p><a className="btn" href="/api/shifts/template.csv">{tr(lang, 'download_template')}</a></p>
-        <p><input type="file" accept=".csv,text/csv" onChange={(e) => {
+        <p><input type="file" accept=".csv,text/csv" aria-label={tr(lang, 'shift_import')} onChange={(e) => {
           const f = e.target.files?.[0]; if (!f) return;
           const r = new FileReader(); r.onload = () => setPaste(String(r.result)); r.readAsText(f);
         }} /></p>
-        <textarea rows={4} style={{ width: '100%' }} placeholder="2026-11-08,Bima Prasetyo,Pagi,07:00,15:00,NOC," value={paste} onChange={(e) => setPaste(e.target.value)} />
+        <textarea rows={4} style={{ width: '100%' }} aria-label={tr(lang, 'shift_import')} placeholder="2026-11-08,Bima Prasetyo,Pagi,07:00,15:00,NOC," value={paste} onChange={(e) => setPaste(e.target.value)} />
         <p><button className="btn primary" onClick={() => {
           const rows = parseCsv(paste);
           if (!rows.length) { ctx.toast(tr(lang, 'nothing_to_import'), false); return; }
@@ -82,11 +84,11 @@ export function CalendarView({ ctx }: { ctx: ViewCtx }) {
           const matched = preview.filter((r) => S.people.some((p) => p.name.toLowerCase() === (r.name || '').toLowerCase()));
           return (
             <div>
-              <table><thead><tr><th>{tr(lang, 'date_label')}</th><th>{tr(lang, 'th_name')}</th><th>Shift</th><th>{lang === 'id' ? 'Cocok?' : 'Match'}</th></tr></thead>
+              <div className="table-wrap"><table><thead><tr><th>{tr(lang, 'date_label')}</th><th>{tr(lang, 'th_name')}</th><th>Shift</th><th>{lang === 'id' ? 'Cocok?' : 'Match'}</th></tr></thead>
                 <tbody>{preview.map((r, i) => {
                   const ok = S.people.some((p) => p.name.toLowerCase() === (r.name || '').toLowerCase());
                   return <tr key={i}><td>{r.date}</td><td>{r.name}</td><td>{r.shift}</td><td>{ok ? tr(lang, 'match_ok') : tr(lang, 'match_no')}</td></tr>;
-                })}</tbody></table>
+                })}</tbody></table></div>
               <p>{matched.length} {tr(lang, 'matched')} / {preview.length - matched.length} {tr(lang, 'no_such_person')}.</p>
               <p><button className="btn primary" onClick={async () => {
                 try {
@@ -117,6 +119,20 @@ export function MaterialsView({ ctx }: { ctx: ViewCtx }) {
   const days = useMemo(() => [...S.materialDays].sort((a, b) => b.date.localeCompare(a.date)), [S.materialDays]);
   const [newDayDate, setNewDayDate] = useState(todayStr());
   const [issueLines, setIssueLines] = useState([{ name: '', qty: '', unit: 'pcs' }]);
+
+  // The daily report lives in the app today; Warehouse also needs it outside
+  // the app (archive, forward to a manager). Client-side CSV, no API change.
+  const downloadCsv = (d: MaterialDay) => {
+    const rows = [
+      [tr(lang, 'th_item'), tr(lang, 'th_issued'), tr(lang, 'th_used'), tr(lang, 'th_returned'), tr(lang, 'th_variance'), tr(lang, 'th_where')],
+      ...d.lines.map((l) => [l.name, `${l.issuedQty} ${l.unit}`, l.usedQty ?? '', l.returnedQty ?? '', l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0), l.note || '']),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `material-${d.date}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
   // Per-line used/returned/note inputs, keyed by line id — local state so
   // typing does not re-render the whole view from the server state.
   const [logVals, setLogVals] = useState<Record<number, { used: string; ret: string; note: string }>>({});
@@ -135,13 +151,14 @@ export function MaterialsView({ ctx }: { ctx: ViewCtx }) {
         return (
           <div key={d.id} className="panel">
             <h3>{d.date} — {tr(lang, 'status_col')}: {tStatus(lang, d.status)}{d.status === 'approved' ? ` (${tr(lang, 'checked_by')} ${personName(d.checkedById)})` : ''}{d.status === 'flagged' ? ` — ${d.checkNote}` : ''}</h3>
-            <table><thead><tr><th>{tr(lang, 'th_item')}</th><th>{tr(lang, 'th_issued')}</th><th>{tr(lang, 'th_used')}</th><th>{tr(lang, 'th_returned')}</th><th>{tr(lang, 'th_variance')}</th><th>{tr(lang, 'th_where')}</th></tr></thead>
+            <div className="table-wrap"><table><thead><tr><th>{tr(lang, 'th_item')}</th><th>{tr(lang, 'th_issued')}</th><th>{tr(lang, 'th_used')}</th><th>{tr(lang, 'th_returned')}</th><th>{tr(lang, 'th_variance')}</th><th>{tr(lang, 'th_where')}</th></tr></thead>
               <tbody>
                 {d.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return (
                   <tr key={l.id}><td>{l.name}</td><td>{l.issuedQty} {l.unit}</td><td>{l.usedQty ?? '—'}</td><td>{l.returnedQty ?? '—'}</td><td className={v ? 'var-bad' : 'var-ok'}>{v}</td><td>{l.note || ''}</td></tr>
                 ); })}
                 <tr><td><b>{tr(lang, 'total')}</b></td><td><b>{tot.i}</b></td><td><b>{tot.u}</b></td><td><b>{tot.r}</b></td><td className={variance ? 'var-bad' : 'var-ok'}><b>{variance}</b></td><td></td></tr>
-              </tbody></table>
+              </tbody></table></div>
+            <p><button className="btn" onClick={() => downloadCsv(d)}>{tr(lang, 'download_csv')}</button></p>
             {d.status === 'open' && actor.role === 'cs' && (
               <div>
                 <h4>{tr(lang, 'log_used_h')}</h4>
@@ -150,9 +167,9 @@ export function MaterialsView({ ctx }: { ctx: ViewCtx }) {
                   return (
                     <div key={l.id} className="mat-log-row">
                       <label>{l.name} — {tr(lang, 'th_issued')} {l.issuedQty} {l.unit}</label>
-                      <input type="number" min="0" step="any" style={{ width: 90 }} value={lv.used} placeholder={tr(lang, 'th_used')} onChange={(e) => setLog(l.id, { used: e.target.value })} />
-                      <input type="number" min="0" step="any" style={{ width: 90 }} value={lv.ret} placeholder={tr(lang, 'th_returned')} onChange={(e) => setLog(l.id, { ret: e.target.value })} />
-                      <input type="text" style={{ width: 260 }} value={lv.note} placeholder={tr(lang, 'where_ph')} onChange={(e) => setLog(l.id, { note: e.target.value })} />
+                      <input type="number" min="0" step="any" style={{ width: 90 }} value={lv.used} aria-label={tr(lang, 'th_used')} placeholder={tr(lang, 'th_used')} onChange={(e) => setLog(l.id, { used: e.target.value })} />
+                      <input type="number" min="0" step="any" style={{ width: 90 }} value={lv.ret} aria-label={tr(lang, 'th_returned')} placeholder={tr(lang, 'th_returned')} onChange={(e) => setLog(l.id, { ret: e.target.value })} />
+                      <input type="text" style={{ width: 260 }} value={lv.note} aria-label={tr(lang, 'where_ph')} placeholder={tr(lang, 'where_ph')} onChange={(e) => setLog(l.id, { note: e.target.value })} />
                       <button className="btn small" onClick={async () => {
                         try { const s = await api(`/api/material-days/${d.id}/log`, 'POST', { lineId: l.id, usedQty: Number(lv.used), returnedQty: Number(lv.ret), note: lv.note }, ctx.actorId); ctx.setState(s); ctx.toast(tr(lang, 'logged')); } catch (e: any) { ctx.toast(e.message, false); }
                       }}>{tr(lang, 'save_btn')}</button>
@@ -170,11 +187,11 @@ export function MaterialsView({ ctx }: { ctx: ViewCtx }) {
                 <h4>{tr(lang, 'check_h')}</h4>
                 <p>
                   <button className="btn primary" onClick={async () => {
-                    try { const s = await api(`/api/material-days/${d.id}/check`, 'POST', { decision: 'approved', note: '' }, ctx.actorId); ctx.setState(s); ctx.toast(`${tr(lang, 'status_label')}: approved.`); } catch (e: any) { ctx.toast(e.message, false); }
+                    try { const s = await api(`/api/material-days/${d.id}/check`, 'POST', { decision: 'approved', note: '' }, ctx.actorId); ctx.setState(s); ctx.toast(`${tr(lang, 'status_label')}: ${tStatus(lang, 'approved')}.`); } catch (e: any) { ctx.toast(e.message, false); }
                   }}>{tr(lang, 'approve_match')}</button>{' '}
                   <button className="btn danger" onClick={async () => {
                     const note = window.prompt(tr(lang, 'flag_prompt')) || '';
-                    try { const s = await api(`/api/material-days/${d.id}/check`, 'POST', { decision: 'flagged', note }, ctx.actorId); ctx.setState(s); ctx.toast(`${tr(lang, 'status_label')}: flagged.`); } catch (e: any) { ctx.toast(e.message, false); }
+                    try { const s = await api(`/api/material-days/${d.id}/check`, 'POST', { decision: 'flagged', note }, ctx.actorId); ctx.setState(s); ctx.toast(`${tr(lang, 'status_label')}: ${tStatus(lang, 'flagged')}.`); } catch (e: any) { ctx.toast(e.message, false); }
                   }}>{tr(lang, 'flag_mismatch')}</button>
                 </p>
               </div>
@@ -190,9 +207,9 @@ export function MaterialsView({ ctx }: { ctx: ViewCtx }) {
         <div id="issueLines">
           {issueLines.map((l, i) => (
             <div key={i}>
-              <input className="il-name" list="matNames" placeholder={tr(lang, 'item_name_ph')} value={l.name} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
-              <input className="il-qty" type="number" min="0" step="any" placeholder={tr(lang, 'qty_ph')} value={l.qty} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))} />
-              <input className="il-unit" placeholder={tr(lang, 'unit_ph')} value={l.unit} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, unit: e.target.value } : x))} />
+              <input className="il-name" list="matNames" aria-label={tr(lang, 'item_name_ph')} placeholder={tr(lang, 'item_name_ph')} value={l.name} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} />
+              <input className="il-qty" type="number" min="0" step="any" aria-label={tr(lang, 'qty_ph')} placeholder={tr(lang, 'qty_ph')} value={l.qty} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, qty: e.target.value } : x))} />
+              <input className="il-unit" aria-label={tr(lang, 'unit_ph')} placeholder={tr(lang, 'unit_ph')} value={l.unit} onChange={(e) => setIssueLines((v) => v.map((x, j) => j === i ? { ...x, unit: e.target.value } : x))} />
             </div>
           ))}
         </div>
@@ -217,9 +234,9 @@ function IssueMore({ dayId, date, ctx }: { dayId: number; date: string; ctx: Vie
     <div>
       <h4>{tr(lang, 'issue_more_h')}</h4>
       <div className="issue-row">
-        <input list="matNames" placeholder={tr(lang, 'item_name_ph')} style={{ width: 200 }} value={name} onChange={(e) => setName(e.target.value)} />
-        <input type="number" min="0" step="any" placeholder={tr(lang, 'qty_ph')} style={{ width: 80 }} value={qty} onChange={(e) => setQty(e.target.value)} />
-        <input placeholder={tr(lang, 'unit_ph')} style={{ width: 70 }} value={unit} onChange={(e) => setUnit(e.target.value)} />
+        <input list="matNames" aria-label={tr(lang, 'item_name_ph')} placeholder={tr(lang, 'item_name_ph')} style={{ width: 200 }} value={name} onChange={(e) => setName(e.target.value)} />
+        <input type="number" min="0" step="any" aria-label={tr(lang, 'qty_ph')} placeholder={tr(lang, 'qty_ph')} style={{ width: 80 }} value={qty} onChange={(e) => setQty(e.target.value)} />
+        <input aria-label={tr(lang, 'unit_ph')} placeholder={tr(lang, 'unit_ph')} style={{ width: 70 }} value={unit} onChange={(e) => setUnit(e.target.value)} />
         <button className="btn" onClick={async () => {
           try { const s = await api(`/api/material-days/${date}/issue`, 'POST', { lines: [{ name, qty: Number(qty), unit: unit || 'pcs' }] }, ctx.actorId); ctx.setState(s); ctx.toast(tr(lang, 'issued_toast')); setName(''); setQty(''); } catch (e: any) { ctx.toast(e.message, false); }
         }}>{tr(lang, 'issue_btn')}</button>

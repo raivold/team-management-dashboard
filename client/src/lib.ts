@@ -16,7 +16,7 @@ export interface State { people:Person[]; columns:Column[]; tasks:Task[]; shifts
 export const I18N = {
 en: {
   nav_overview:'Overview', nav_board:'Kanban', nav_todo:'To-Do', nav_calendar:'Calendar', nav_materials:'Materials', nav_team:'Team', nav_activity:'Activity',
-  acting_as:'Acting as', demo_badge:'Prototype · demo data',
+  acting_as:'Acting as', demo_badge:'Demo data',
   theme_dark:'🌙 Dark mode', theme_light:'☀️ Light mode',
   subtitle:'PT Sakti Wijaya Network · NOC / OSP / Customer Service / Warehouse',
   overview_title:'Yesterday → Today', overview_sub:'What finished yesterday, what is due today, what material went out, who is on board.',
@@ -66,6 +66,9 @@ en: {
   unassigned:'— unassigned —', staff_group:'Staff', field_group:'Field tech (no login)',
   rename_col:'Rename column:', del_col_confirm:'Delete this column? Its tasks move to the first column.',
   new_col_name:'New column name:', del_file_confirm:'Delete this file?', del_task_confirm:'Delete this task?',
+  close_dialog:'Close dialog', rename_column:'Rename column', delete_column:'Delete column', delete_file:'Delete file',
+  dismiss:'Dismiss', retry:'Retry', skip_to_content:'Skip to content',
+  share_whatsapp:'Share to WhatsApp', download_csv:'Download CSV',
   reject_reason:'Rejection reason:', flag_prompt:'What does not match?',
   pick_file:'Pick a file first.', title_required:'Title is required.', mat_required:'Material name and qty > 0 are required.',
   add_line_required:'Add at least one line with a name and qty.',
@@ -79,7 +82,7 @@ en: {
 },
 id: {
   nav_overview:'Ringkasan', nav_board:'Kanban', nav_todo:'Daftar Tugas', nav_calendar:'Kalender', nav_materials:'Material', nav_team:'Tim', nav_activity:'Aktivitas',
-  acting_as:'Bertindak sebagai', demo_badge:'Prototipe · data demo',
+  acting_as:'Bertindak sebagai', demo_badge:'Data demo',
   theme_dark:'🌙 Mode gelap', theme_light:'☀️ Mode terang',
   subtitle:'PT Sakti Wijaya Network · NOC / OSP / Layanan Pelanggan / Gudang',
   overview_title:'Kemarin → Hari Ini', overview_sub:'Apa yang selesai kemarin, apa yang harus selesai hari ini, material apa yang keluar, siapa yang bertugas.',
@@ -129,6 +132,9 @@ id: {
   unassigned:'— belum ditugaskan —', staff_group:'Staf', field_group:'Teknisi lapangan (tanpa login)',
   rename_col:'Ganti nama kolom:', del_col_confirm:'Hapus kolom ini? Tugasnya pindah ke kolom pertama.',
   new_col_name:'Nama kolom baru:', del_file_confirm:'Hapus file ini?', del_task_confirm:'Hapus tugas ini?',
+  close_dialog:'Tutup dialog', rename_column:'Ganti nama kolom', delete_column:'Hapus kolom', delete_file:'Hapus file',
+  dismiss:'Tutup', retry:'Coba lagi', skip_to_content:'Lewati ke konten',
+  share_whatsapp:'Bagikan ke WhatsApp', download_csv:'Unduh CSV',
   reject_reason:'Alasan penolakan:', flag_prompt:'Apa yang tidak cocok?',
   pick_file:'Pilih file dulu.', title_required:'Judul wajib diisi.', mat_required:'Nama material dan jumlah > 0 wajib diisi.',
   add_line_required:'Tambahkan minimal satu baris dengan nama dan jumlah.',
@@ -147,7 +153,7 @@ export const tCol = (lang:Lang, name:string) => (COL_NAMES[name] ? COL_NAMES[nam
 export const tPri = (lang:Lang, p:string) => ({ normal:['Normal','Normal'], high:['High','Tinggi'], urgent:['Urgent','Mendesak'] } as any)[p]?.[lang === 'id' ? 1 : 0] || p;
 export const tKind = (lang:Lang, k:string) => ({ ticket:['Ticket','Tiket'], project:['Project','Proyek'], maintenance:['Maintenance','Pemeliharaan'], handover:['Handover','Serah Terima'], reminder:['Reminder','Pengingat'] } as any)[k]?.[lang === 'id' ? 1 : 0] || k;
 export const tDept = (lang:Lang, d:string) => ({ 'Head NOC':['Head NOC','Kepala NOC'], 'Customer Service':['Customer Service','Layanan Pelanggan'], 'Warehouse':['Warehouse','Gudang'], 'Field':['Field','Lapangan'] } as any)[d]?.[lang === 'id' ? 1 : 0] || d;
-export const tRole = (lang:Lang, r:string) => ({ head_noc:['head noc','Kepala NOC'], osp:['osp','OSP'], noc:['noc','NOC'], cs:['cs','Layanan Pelanggan'], warehouse_manager:['warehouse manager','Manajer Gudang'], field_tech:['field tech','teknisi lapangan'] } as any)[r]?.[lang === 'id' ? 1 : 0] || r;
+export const tRole = (lang:Lang, r:string) => ({ head_noc:['Head NOC','Kepala NOC'], osp:['OSP','OSP'], noc:['NOC','NOC'], cs:['CS','Layanan Pelanggan'], warehouse_manager:['Warehouse Manager','Manajer Gudang'], field_tech:['Field tech','teknisi lapangan'] } as any)[r]?.[lang === 'id' ? 1 : 0] || r;
 export const tRoleDesc = (lang:Lang, r:string) => ({
   head_noc: ['Head NOC — approves anything', 'Kepala NOC — menyetujui apa pun'],
   osp: ['OSP — drops projects, approves only own dropped tasks', 'OSP — membuat proyek, hanya menyetujui tugas yang dibuatnya sendiri'],

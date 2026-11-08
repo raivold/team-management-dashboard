@@ -1,5 +1,5 @@
 // Task detail modal + New task form — ported from public/app.js (v1.7.0).
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, readFileAsDataUrl } from './api';
 import {
   tr, tCol, tPri, tKind, tDept, CAPTIONS_EN, CAPTIONS_ID,
@@ -26,6 +26,24 @@ export function TaskDetail({ task, ctx }: { task: Task; ctx: ModalCtx }) {
   const doneCol = S.columns.find((c) => c.kind === 'done')!;
   const [caption, setCaption] = useState('');
   const [lightbox, setLightbox] = useState<{ id: number; cap: string } | null>(null);
+  const lightboxRef = useRef<HTMLDivElement>(null);
+  const prevFocusRef = useRef<Element | null>(null);
+
+  // Same dialog behaviour as the task modal: focus inside on open, Escape
+  // closes (without also closing the task modal behind it), focus returns.
+  useEffect(() => {
+    if (!lightbox) return;
+    prevFocusRef.current = document.activeElement;
+    lightboxRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.stopImmediatePropagation(); setLightbox(null); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      (prevFocusRef.current as HTMLElement | null)?.focus?.();
+    };
+  }, [lightbox]);
   const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '—';
 
   const uploadFiles = async (list: FileList | null, category: 'evidence' | 'file') => {
@@ -72,15 +90,17 @@ export function TaskDetail({ task, ctx }: { task: Task; ctx: ModalCtx }) {
       <div className="gallery">
         {ev.length ? ev.map((f) => (
           <figure key={f.id} style={{ margin: 0 }}>
-            <img src={`/api/files/${f.id}`} alt={f.caption || 'evidence'} onClick={() => setLightbox({ id: f.id, cap: f.caption || f.name })} />
+            <img src={`/api/files/${f.id}`} alt={f.caption || 'evidence'} tabIndex={0} role="button" aria-label={f.caption || f.name}
+              onClick={() => setLightbox({ id: f.id, cap: f.caption || f.name })}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLightbox({ id: f.id, cap: f.caption || f.name }); } }} />
             <figcaption className="muted">{f.caption || f.name} · {personName(f.createdById)} · {new Date(f.createdAt).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-GB')}</figcaption>
           </figure>
         )) : <p className="muted">{tr(lang, 'no_evidence')}</p>}
       </div>
       {lightbox && (
-        <div className="modal" onClick={() => setLightbox(null)}>
-          <div className="lightbox-card" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setLightbox(null)}>✕</button>
+        <div className="modal" role="dialog" aria-modal="true" aria-label={lightbox.cap} onClick={() => setLightbox(null)}>
+          <div className="lightbox-card" ref={lightboxRef} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" aria-label={tr(lang, 'close_dialog')} onClick={() => setLightbox(null)}>✕</button>
             <img src={`/api/files/${lightbox.id}`} alt="Evidence photo" />
             <p>{lightbox.cap}</p>
           </div>
@@ -91,7 +111,7 @@ export function TaskDetail({ task, ctx }: { task: Task; ctx: ModalCtx }) {
           <button key={c} type="button" onClick={() => setCaption(c)}>{c}</button>
         ))}
       </div>
-      <p><input type="file" accept="image/*" multiple onChange={(e) => uploadFiles(e.target.files, 'evidence')} /> <span className="muted">{tr(lang, 'caption_label')} <b>{caption || tr(lang, 'caption_blank')}</b> {tr(lang, 'caption_hint')}</span></p>
+      <p><input type="file" accept="image/*" multiple aria-label={tr(lang, 'evidence_photos')} onChange={(e) => uploadFiles(e.target.files, 'evidence')} /> <span className="muted">{tr(lang, 'caption_label')} <b>{caption || tr(lang, 'caption_blank')}</b> {tr(lang, 'caption_hint')}</span></p>
 
       <h3>{tr(lang, 'mat_adhoc')}</h3>
       <ul>{task.materials.length ? task.materials.map((m) => (
@@ -101,17 +121,24 @@ export function TaskDetail({ task, ctx }: { task: Task; ctx: ModalCtx }) {
 
       <h3>{tr(lang, 'files_h')}</h3>
       <ul>{files.length ? files.map((f) => (
-        <li key={f.id}><a href={`/api/files/${f.id}`} target="_blank" rel="noreferrer">{f.name}</a> <button className="btn small" onClick={async () => {
+        <li key={f.id}><a href={`/api/files/${f.id}`} target="_blank" rel="noreferrer">{f.name}</a> <button className="btn small" aria-label={tr(lang, 'delete_file')} onClick={async () => {
           if (!window.confirm(tr(lang, 'del_file_confirm'))) return;
           try { const s = await api(`/api/files/${f.id}`, 'DELETE', {}, ctx.actorId); ctx.setState(s); } catch (e: any) { ctx.toast(e.message, false); }
         }}>✕</button></li>
       )) : <li className="muted">{tr(lang, 'no_files')}</li>}</ul>
-      <p><input type="file" id="fileInput" /> <button className="btn" onClick={async () => {
+      <p><input type="file" id="fileInput" aria-label={tr(lang, 'attach_file')} /> <button className="btn" onClick={async () => {
         const input = document.getElementById('fileInput') as HTMLInputElement | null;
         const f = input?.files?.[0]; if (!f) { ctx.toast(tr(lang, 'pick_file'), false); return; }
         const data = await readFileAsDataUrl(f);
         try { const s = await api(`/api/tasks/${task.id}/files`, 'POST', { name: f.name, mimeType: f.type, data, category: 'file', caption: '' }, ctx.actorId); ctx.setState(s); ctx.toast(tr(lang, 'file_attached')); } catch (e: any) { ctx.toast(e.message, false); }
       }}>{tr(lang, 'attach_file')}</button></p>
+      <p><a className="btn" href={`https://wa.me/?text=${encodeURIComponent(
+        [task.title,
+          task.customer ? `${tr(lang, 'customer_word')}: ${task.customer}` : '',
+          task.location ? `${tr(lang, 'location_label')}: ${task.location}` : '',
+          task.dueDate ? `${tr(lang, 'due_prefix')}: ${task.dueDate}` : '',
+          `${tr(lang, 'assigned_to')}: ${personName(task.assigneeId)}`,
+        ].filter(Boolean).join('\n'))}`} target="_blank" rel="noreferrer">{tr(lang, 'share_whatsapp')}</a></p>
       <p><button className="btn danger" onClick={async () => {
         if (!window.confirm(tr(lang, 'del_task_confirm'))) return;
         try { await api(`/api/tasks/${task.id}`, 'DELETE', {}, ctx.actorId); ctx.toast(tr(lang, 'task_deleted')); ctx.close(); ctx.afterDelete(); } catch (e: any) { ctx.toast(e.message, false); }
@@ -126,11 +153,11 @@ function AddMaterial({ task, ctx }: { task: Task; ctx: ModalCtx }) {
   const [serial, setSerial] = useState(''); const [note, setNote] = useState('');
   return (
     <p className="adhoc-row">
-      <input list="matNames2" placeholder={tr(lang, 'item_name_ph')} style={{ width: 180 }} value={name} onChange={(e) => setName(e.target.value)} />
-      <input type="number" min="0" step="any" placeholder={tr(lang, 'qty_ph')} style={{ width: 80 }} value={qty} onChange={(e) => setQty(e.target.value)} />
-      <input placeholder={tr(lang, 'unit_ph')} style={{ width: 70 }} value={unit} onChange={(e) => setUnit(e.target.value)} />
-      <input placeholder={tr(lang, 'serial_ph')} style={{ width: 150 }} value={serial} onChange={(e) => setSerial(e.target.value)} />
-      <input placeholder={tr(lang, 'where_task_ph')} style={{ width: 220 }} value={note} onChange={(e) => setNote(e.target.value)} />
+      <input list="matNames2" aria-label={tr(lang, 'item_name_ph')} placeholder={tr(lang, 'item_name_ph')} style={{ width: 180 }} value={name} onChange={(e) => setName(e.target.value)} />
+      <input type="number" min="0" step="any" aria-label={tr(lang, 'qty_ph')} placeholder={tr(lang, 'qty_ph')} style={{ width: 80 }} value={qty} onChange={(e) => setQty(e.target.value)} />
+      <input aria-label={tr(lang, 'unit_ph')} placeholder={tr(lang, 'unit_ph')} style={{ width: 70 }} value={unit} onChange={(e) => setUnit(e.target.value)} />
+      <input aria-label={tr(lang, 'serial_ph')} placeholder={tr(lang, 'serial_ph')} style={{ width: 150 }} value={serial} onChange={(e) => setSerial(e.target.value)} />
+      <input aria-label={tr(lang, 'where_task_ph')} placeholder={tr(lang, 'where_task_ph')} style={{ width: 220 }} value={note} onChange={(e) => setNote(e.target.value)} />
       <button className="btn" onClick={async () => {
         const q = Number(qty);
         if (!name.trim() || !(q > 0)) { ctx.toast(tr(lang, 'mat_required'), false); return; }

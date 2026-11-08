@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, fetchState } from './api';
 import {
-  tr, tCol, tPri, tKind, tDept, tRole, isEntryColumn, todayStr, ydayStr,
+  tr, tCol, tPri, tKind, tDept, tRole, tStatus, isEntryColumn, todayStr, ydayStr,
   type Lang, type State, type Task,
 } from './lib';
 import { CalendarView, MaterialsView, type ViewCtx } from './CalendarMaterials';
@@ -36,11 +36,17 @@ export default function App() {
   const [modal, setModal] = useState<{ kind: 'task'; id: number } | { kind: 'new'; columnId: number | null } | null>(null);
   const [toastMsg, setToastMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const toastTimer = useRef<number | undefined>(undefined);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const prevFocusRef = useRef<Element | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const prevViewRef = useRef<View | null>(null);
 
   const toast = useCallback((text: string, ok = true) => {
     setToastMsg({ text, ok });
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToastMsg(null), 3500);
+    // Success toasts auto-dismiss; error toasts stay until dismissed, so
+    // the message cannot vanish before anyone has read it.
+    if (ok) toastTimer.current = window.setTimeout(() => setToastMsg(null), 3500);
   }, []);
 
   const refresh = useCallback(async (actor: number) => {
@@ -57,8 +63,40 @@ export default function App() {
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
   useEffect(() => { document.documentElement.lang = lang === 'id' ? 'id' : 'en'; }, [lang]);
 
+  // A view change is a client-side route change: say so in the title and
+  // move focus to the new view, so keyboard and screen-reader users land
+  // in the content instead of staying on the nav button they pressed.
+  // Focus moves only when the view actually changes — never on first load
+  // or on a language switch.
+  useEffect(() => {
+    if (!S) return;
+    const shown: View = S.people.find((p) => p.id === actorId)?.role === 'warehouse_manager' ? 'materials' : view;
+    document.title = `Team Management Dashboard — ${tr(lang, 'nav_' + shown)}`;
+    if (prevViewRef.current !== null && prevViewRef.current !== shown) mainRef.current?.focus();
+    prevViewRef.current = shown;
+  }, [S, view, lang, actorId]);
+
+  // Dialog behaviour for the task / new-task modal: focus inside on open,
+  // Escape closes, focus returns to whatever opened it.
+  useEffect(() => {
+    if (!modal) return;
+    prevFocusRef.current = document.activeElement;
+    modalRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setModal(null); };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      (prevFocusRef.current as HTMLElement | null)?.focus?.();
+    };
+  }, [modal]);
+
   if (!S) {
-    return <main><p>{loadError ? `${tr(lang, 'failed_load')}${loadError}` : 'Loading dashboard…'}</p></main>;
+    return <main>
+      {loadError
+        ? <><p>{tr(lang, 'failed_load')}{loadError}</p>
+          <p><button className="btn primary" onClick={() => { setLoadError(''); refresh(actorId).catch((e: any) => setLoadError(e.message)); }}>{tr(lang, 'retry')}</button></p></>
+        : <p>Loading dashboard…</p>}
+    </main>;
   }
 
   const actor = S.people.find((p) => p.id === actorId) || S.people[0];
@@ -101,6 +139,7 @@ export default function App() {
 
   return (
     <div>
+      <a className="skip-link" href="#main">{tr(lang, 'skip_to_content')}</a>
       <header className="topbar">
         <div>
           <h1>Team Management Dashboard</h1>
@@ -137,7 +176,7 @@ export default function App() {
           )
         ))}
       </nav>
-      <main id="main">
+      <main id="main" ref={mainRef} tabIndex={-1}>
         {currentView === 'overview' && <Overview S={S} lang={lang} openTask={openTask} />}
         {currentView === 'board' && (
           <section>
@@ -146,7 +185,7 @@ export default function App() {
                 const name = window.prompt(tr(lang, 'new_col_name')); if (!name) return;
                 try { const s = await api('/api/columns', 'POST', { name }, actorId); setS(s); } catch (e: any) { toast(e.message, false); }
               }}>{tr(lang, 'add_column')}</button>
-              <input className="filter" placeholder={tr(lang, 'filter_ph')} value={boardFilter} onChange={(e) => setBoardFilter(e.target.value)} />
+              <input className="filter" aria-label={tr(lang, 'filter_ph')} placeholder={tr(lang, 'filter_ph')} value={boardFilter} onChange={(e) => setBoardFilter(e.target.value)} />
             </div>
             <Board S={S} lang={lang} filter={boardFilter} openTask={openTask} moveTask={moveTask} newTask={(colId) => setModal({ kind: 'new', columnId: colId })} toast={toast} setState={setS} actorId={actorId} />
           </section>
@@ -159,9 +198,9 @@ export default function App() {
       </main>
 
       {modal && (
-        <div className="modal" onClick={(e) => { if (e.target === e.currentTarget) setModal(null); }}>
-          <div className="modal-card">
-            <button className="modal-close" onClick={() => setModal(null)}>✕</button>
+        <div className="modal" role="dialog" aria-modal="true" aria-label={modal.kind === 'task' ? (modalTask?.title || tr(lang, 'new_task_title')) : tr(lang, 'new_task_title')} onClick={(e) => { if (e.target === e.currentTarget) setModal(null); }}>
+          <div className="modal-card" ref={modalRef} tabIndex={-1}>
+            <button className="modal-close" aria-label={tr(lang, 'close_dialog')} onClick={() => setModal(null)}>✕</button>
             {modal.kind === 'task' && modalTask
               ? <TaskDetail key={modalTask.id + '-' + modalTask.files.length + '-' + modalTask.materials.length} task={modalTask} ctx={modalCtx} />
               : modal.kind === 'task' ? <p className="muted">Task not found.</p>
@@ -169,7 +208,11 @@ export default function App() {
           </div>
         </div>
       )}
-      {toastMsg && <div className={`toast${toastMsg.ok ? '' : ' error'}`}>{toastMsg.text}</div>}
+      <div role="status" aria-live="polite">
+        {toastMsg && <div className={`toast${toastMsg.ok ? '' : ' error'}`}>{toastMsg.text}
+          {!toastMsg.ok && <button type="button" aria-label={tr(lang, 'dismiss')} onClick={() => setToastMsg(null)}>✕</button>}
+        </div>}
+      </div>
     </div>
   );
 }
@@ -210,11 +253,11 @@ function Overview({ S, lang, openTask }: { S: State; lang: Lang; openTask: (id: 
       </div>
       <div className="panel"><h3>{tr(lang, 'mat_out_yday')}</h3>
         {matY ? <>
-          <table><thead><tr><th>{tr(lang, 'th_item')}</th><th>{tr(lang, 'th_issued')}</th><th>{tr(lang, 'th_used')}</th><th>{tr(lang, 'th_returned')}</th><th>{tr(lang, 'th_variance')}</th><th>{tr(lang, 'th_where')}</th></tr></thead>
+          <div className="table-wrap"><table><thead><tr><th>{tr(lang, 'th_item')}</th><th>{tr(lang, 'th_issued')}</th><th>{tr(lang, 'th_used')}</th><th>{tr(lang, 'th_returned')}</th><th>{tr(lang, 'th_variance')}</th><th>{tr(lang, 'th_where')}</th></tr></thead>
             <tbody>{matY.lines.map((l) => { const v = l.issuedQty - (l.usedQty || 0) - (l.returnedQty || 0); return (
               <tr key={l.id}><td>{l.name}</td><td>{l.issuedQty} {l.unit}</td><td>{l.usedQty ?? '—'}</td><td>{l.returnedQty ?? '—'}</td><td className={v ? 'var-bad' : 'var-ok'}>{v}</td><td>{l.note || ''}</td></tr>
-            ); })}</tbody></table>
-          <p className="muted">{tr(lang, 'status_label')}: {matY.status}{matY.status === 'approved' ? ' ' + tr(lang, 'by_label') + ' ' + personName(matY.checkedById) : ''}</p>
+            ); })}</tbody></table></div>
+          <p className="muted">{tr(lang, 'status_label')}: {tStatus(lang, matY.status)}{matY.status === 'approved' ? ' ' + tr(lang, 'by_label') + ' ' + personName(matY.checkedById) : ''}</p>
         </> : <p className="muted">{tr(lang, 'no_mat_yday')}</p>}
       </div>
     </div>
@@ -227,7 +270,9 @@ function TaskCard({ task, S, lang, openTask, moveTask }: { task: Task; S: State;
   const col = S.columns.find((c) => c.id === task.columnId)!;
   const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '—';
   return (
-    <div className="task" draggable data-id={task.id} onClick={(e) => { if ((e.target as HTMLElement).closest('select,input,button,textarea')) return; openTask(task.id); }}
+    <div className="task" draggable data-id={task.id} tabIndex={0} role="button" aria-label={task.title}
+      onClick={(e) => { if ((e.target as HTMLElement).closest('select,input,button,textarea')) return; openTask(task.id); }}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openTask(task.id); } }}
       onDragStart={(e) => e.dataTransfer.setData('text/plain', String(task.id))}>
       <div className="t">{task.title}</div>
       <div className="m">{task.customer || task.location || ''}</div>
@@ -256,7 +301,7 @@ function Board({ S, lang, filter, openTask, moveTask, newTask, toast, setState, 
 }) {
   const q = filter.toLowerCase();
   const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '—';
-  const tasks = S.tasks.filter((t) => !q || [t.title, t.customer, t.location, personName(t.assigneeId)].join(' ').toLowerCase().includes(q));
+  const tasks = S.tasks.filter((t) => !q || [t.title, t.customer, t.location, t.serviceId, personName(t.assigneeId)].join(' ').toLowerCase().includes(q));
   return (
     <div className="board">
       {S.columns.map((c) => {
@@ -268,12 +313,12 @@ function Board({ S, lang, filter, openTask, moveTask, newTask, toast, setState, 
             onDrop={async (e) => { e.preventDefault(); e.currentTarget.classList.remove('dragover'); await moveTask(Number(e.dataTransfer.getData('text/plain')), c.id); }}>
             <h3>{tCol(lang, c.name)} ({list.length})
               <span>
-                <button className="btn small" onClick={async (e) => {
+                <button className="btn small" aria-label={tr(lang, 'rename_column')} onClick={async (e) => {
                   e.stopPropagation();
                   const name = window.prompt(tr(lang, 'rename_col'), c.name); if (!name) return;
                   try { const s = await api(`/api/columns/${c.id}`, 'PATCH', { name }, actorId); setState(s); } catch (err: any) { toast(err.message, false); }
                 }}>✎</button>{' '}
-                <button className="btn small" onClick={async (e) => {
+                <button className="btn small" aria-label={tr(lang, 'delete_column')} onClick={async (e) => {
                   e.stopPropagation();
                   if (!window.confirm(tr(lang, 'del_col_confirm'))) return;
                   try { const s = await api(`/api/columns/${c.id}`, 'DELETE', {}, actorId); setState(s); } catch (err: any) { toast(err.message, false); }
@@ -301,7 +346,7 @@ function Todo({ S, lang, openTask }: { S: State; lang: Lang; openTask: (id: numb
       {Object.entries(groups).map(([who, list]) => (
         <div key={who} className="panel"><h3>{who}</h3>
           <ul>{list.map((t) => <li key={t.id}>
-            <a href="#" onClick={(e) => { e.preventDefault(); openTask(t.id); }}>{t.title}</a> — {colById(t.columnId)?.name || ''}
+            <a href="#" onClick={(e) => { e.preventDefault(); openTask(t.id); }}>{t.title}</a> — {colById(t.columnId) ? tCol(lang, colById(t.columnId)!.name) : ''}
             {t.dueDate ? ` · ${tr(lang, 'due_prefix')} ${t.dueDate}` : ''} <span className={`pill ${t.priority === 'high' || t.priority === 'urgent' ? t.priority : ''}`}>{tPri(lang, t.priority)}</span>
           </li>)}</ul>
         </div>

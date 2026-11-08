@@ -10,8 +10,8 @@ export function TeamView({ S, lang }: { S: State; lang: Lang }) {
       {Object.entries(byDept).map(([dept, list]) => (
         <div key={dept} className="panel">
           <h3>{tDept(lang, dept)}</h3>
-          <table><thead><tr><th>{tr(lang, 'th_name')}</th><th>{tr(lang, 'th_role')}</th><th>{tr(lang, 'th_can_approve')}</th></tr></thead>
-            <tbody>{list.map((p) => <tr key={p.id}><td>{p.name}</td><td>{tRoleDesc(lang, p.role)}</td><td>{tApprove(lang, p.role)}</td></tr>)}</tbody></table>
+          <div className="table-wrap"><table><thead><tr><th>{tr(lang, 'th_name')}</th><th>{tr(lang, 'th_role')}</th><th>{tr(lang, 'th_can_approve')}</th></tr></thead>
+            <tbody>{list.map((p) => <tr key={p.id}><td>{p.name}</td><td>{tRoleDesc(lang, p.role)}</td><td>{tApprove(lang, p.role)}</td></tr>)}</tbody></table></div>
         </div>
       ))}
     </div>
