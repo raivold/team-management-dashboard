@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Team Management Dashboard — PT Sakti Wijaya Network</title>
 <link rel="stylesheet" href="/styles.css">
+<script>/* Apply the saved theme before first paint (default light, no OS follow). */try{var _t=localStorage.getItem('tmd-theme');if(_t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 </head>
 <body>
 <header class="topbar">
@@ -16,6 +17,7 @@
     <div class="lang-toggle" role="group" aria-label="Language / Bahasa">
       <button id="langEn" type="button" class="active">EN</button><button id="langId" type="button">ID</button>
     </div>
+    <button id="themeToggle" type="button" class="theme-toggle" aria-label="Toggle dark / light mode">🌙 Dark</button>
     <label for="actorSelect">Acting as</label>
     <select id="actorSelect"></select>
     <span id="actorRole" class="role-pill"></span>

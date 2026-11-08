@@ -10,6 +10,7 @@ const I18N = {
 en: {
   nav_overview:'Overview', nav_board:'Kanban', nav_todo:'To-Do', nav_calendar:'Calendar', nav_materials:'Materials', nav_team:'Team', nav_activity:'Activity',
   acting_as:'Acting as', demo_badge:'Prototype · demo data',
+  theme_dark:'🌙 Dark', theme_light:'☀️ Light',
   subtitle:'PT Sakti Wijaya Network · NOC / OSP / Customer Service / Warehouse',
   overview_title:'Yesterday → Today', overview_sub:'What finished yesterday, what is due today, what material went out, who is on board.',
   done_yesterday:'Done yesterday', due_today:'Due today', overdue:'Overdue', mat_used_yday:'Material used yesterday (units)',
@@ -72,6 +73,7 @@ en: {
 id: {
   nav_overview:'Ringkasan', nav_board:'Kanban', nav_todo:'Daftar Tugas', nav_calendar:'Kalender', nav_materials:'Material', nav_team:'Tim', nav_activity:'Aktivitas',
   acting_as:'Bertindak sebagai', demo_badge:'Prototipe · data demo',
+  theme_dark:'🌙 Gelap', theme_light:'☀️ Terang',
   subtitle:'PT Sakti Wijaya Network · NOC / OSP / Layanan Pelanggan / Gudang',
   overview_title:'Kemarin → Hari Ini', overview_sub:'Apa yang selesai kemarin, apa yang harus selesai hari ini, material apa yang keluar, siapa yang bertugas.',
   done_yesterday:'Selesai kemarin', due_today:'Jatuh tempo hari ini', overdue:'Terlambat', mat_used_yday:'Material terpakai kemarin (unit)',
@@ -162,6 +164,22 @@ function setLang(l) {
   renderActor(); applyStaticText(); applyRoleVisibility(); renderAll();
 }
 
+// ---- Theme: dark / light. Default light; explicit toggle only (no OS
+// follow, so the choice is predictable). Persisted in localStorage.
+let theme = 'light';
+try { const _t = localStorage.getItem('tmd-theme'); if (_t === 'dark' || _t === 'light') theme = _t; } catch { /* storage blocked: stay light */ }
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', theme);
+  const b = document.getElementById('themeToggle');
+  if (b) b.textContent = theme === 'dark' ? tr('theme_light') : tr('theme_dark');
+}
+function setTheme(t2) {
+  if (t2 !== 'dark' && t2 !== 'light') return;
+  theme = t2;
+  try { localStorage.setItem('tmd-theme', t2); } catch {}
+  applyTheme();
+}
+
 let currentView = 'overview';
 let calCursor = new Date();
 const $ = (s) => document.querySelector(s);
@@ -205,6 +223,7 @@ function applyStaticText() {
   const sub = document.querySelector('.topbar .sub'); if (sub) sub.textContent = tr('subtitle');
   const al = document.querySelector('label[for="actorSelect"]'); if (al) al.textContent = tr('acting_as');
   const db = document.querySelector('.demo-badge'); if (db) db.textContent = tr('demo_badge');
+  const tb = document.getElementById('themeToggle'); if (tb) tb.textContent = theme === 'dark' ? tr('theme_light') : tr('theme_dark');
 }
 function applyRoleVisibility() {
   const wm = isWM();
@@ -637,6 +656,8 @@ function newTaskForm(columnId) {
 document.querySelectorAll('#nav button').forEach((b) => b.addEventListener('click', () => switchView(b.dataset.view)));
 const _le = document.getElementById('langEn'); if (_le) _le.addEventListener('click', () => setLang('en'));
 const _li = document.getElementById('langId'); if (_li) _li.addEventListener('click', () => setLang('id'));
+const _tt = document.getElementById('themeToggle'); if (_tt) _tt.addEventListener('click', () => setTheme(theme === 'dark' ? 'light' : 'dark'));
+applyTheme();
 document.documentElement.lang = lang === 'id' ? 'id' : 'en';
 if (_le) _le.classList.toggle('active', lang === 'en');
 if (_li) _li.classList.toggle('active', lang === 'id');

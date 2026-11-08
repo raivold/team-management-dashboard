@@ -67,9 +67,17 @@ over Tailscale.
   persists across reloads. **Default is English** on first load, so existing
   users see no surprise change — Indonesian is one tap away. Proper names,
   customer names, and material names are never translated.
+- **Theme — dark / light:** a **🌙 Dark / ☀️ Light** toggle in the header,
+  next to EN | ID. **Default is light** on first load; the choice is saved
+  in the browser (`localStorage`, key `tmd-theme`) and persists across
+  reloads, and is applied before first paint so there is no light flash.
+  Dark mode covers every view (Overview, Kanban, To-Do, Calendar, Materials,
+  Team, Activity, task panel, modals, tables, inputs, pills, toast) with
+  light text on dark surfaces. No OS-theme follow — the toggle is explicit.
 
 ## Changelog
 
+- **v1.6.0** — Dark / light mode toggle in the header (🌙 Dark / ☀️ Light, 🌙 Gelap / ☀️ Terang in Indonesian), persisted in `localStorage` (`tmd-theme`), default light, applied before first paint. Dark theme is a `data-theme="dark"` override block in `styles.css` covering all views, panels, modals, tables, inputs, pills and toast. No logic, roles, approval rules, or API behaviour changed.
 - **v1.5.0** — Restyled the standalone to match the Muse prototype: same navy/blue/teal palette, now with soft shadows, 12–14px rounded cards/panels/columns, stat cards with coloured left accents, Kanban task cards that lift on hover, a gradient navy topbar, pill nav with shadow, cleaner tables, and rounded buttons/inputs/modals. CSS/layout only — no logic, roles, approval rules, i18n strings, or API behaviour changed; no external fonts/CDN.
 - **v1.4.1** — Bugfix: fixed `Failed to load: t is not a function` on Overview. The i18n translator was named `t` and got shadowed by local variables also named `t` (`todayStr()` result, task lookups). The translator is now `tr` throughout, and the broken `no_shifts_today` / `no_mat_yday` strings are plain text again (English + Indonesian).
 - **v1.4.0** — "+ Add task" only in Backlog and To Do (server-enforced).
