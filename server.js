@@ -1,5 +1,6 @@
 // Team Management Dashboard — standalone, self-hostable version.
-// Node.js + Express + SQLite (node:sqlite, no native addons), vanilla frontend.
+// Node.js + Express + SQLite (node:sqlite, no native addons), React frontend
+// (Vite build output in dist/, built with `npm run build`).
 // Single-user demo auth: the client sends `actorId` ("Acting as" switcher).
 // All approval / material-cycle rules are enforced here on the server,
 // never only in the UI.
@@ -225,7 +226,15 @@ seedIfEmpty();
 // ---- API ----
 const app = express();
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve the React build (dist/) in production. The old vanilla frontend in
+// public/ is kept in the repo as a fallback: if dist/ has not been built
+// yet (e.g. a fresh clone before `npm run build`), serve public/ instead
+// so the server still starts — but the React build is the served frontend
+// once built. Docker always builds first (see Dockerfile).
+const FRONTEND_DIR = fs.existsSync(path.join(__dirname, 'dist', 'index.html'))
+  ? path.join(__dirname, 'dist')
+  : path.join(__dirname, 'public');
+app.use(express.static(FRONTEND_DIR));
 
 function fullState(actor = null) {
   const people = db.prepare('SELECT * FROM people ORDER BY department, name').all();
@@ -592,7 +601,7 @@ app.delete('/api/files/:id', (req, res) => {
 
 app.use((req, res) => {
   if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found.' });
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {

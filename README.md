@@ -9,6 +9,14 @@ of that prototype (Muse fullstack artifacts cannot be exported); it is fresh
 code implementing the same spec, so it can run on your own VM and be reached
 over Tailscale.
 
+**v2.0.0: the frontend is now React** (Vite + React 18 + TypeScript, like
+the prototype) — same API, same data, same features as the vanilla frontend
+it replaces. The old vanilla frontend is still in the repo at `public/`
+(`public/app.js`, `public/index.html`, `public/styles.css`) as a fallback:
+if `dist/` has not been built yet, the server serves `public/` so it still
+starts, but the React build in `dist/` is the served frontend once built
+(`npm run build`). `server.js` and the API/DB schema are unchanged.
+
 ## Features
 
 - **Overview — Yesterday → Today:** done yesterday, due/overdue today,
@@ -77,6 +85,7 @@ over Tailscale.
 
 ## Changelog
 
+- **v2.0.0** — Frontend rebuilt in React (Vite + React 18 + TypeScript), like the prototype. Same API, same SQLite DB/schema, same features: Overview, Kanban (drag-drop, Add Task only in Backlog/To Do), To-Do, Calendar + CSV shift import, Materials daily cycle, Team, Activity, evidence photos, EN/ID + dark/light toggles, "Acting as" switcher. The i18n dictionary and the v1.7.0 styles were ported verbatim, so the look and all translations are unchanged. `server.js` only changed to serve the built frontend from `dist/` (falling back to the old vanilla `public/` if `dist/` has not been built yet — the old files are kept in the repo, not deleted). Build with `npm run build`, then `node server.js`; dev is `npm run dev` (Vite, port 5173, proxies `/api` to the Express server on 3000). Docker builds the frontend during image build. `dist/` is gitignored and built on deploy. Verified: `npm run build` passes, `npx tsc --noEmit` clean, full-stack run on a throwaway DB — create/move/approve-as-Head-NOC, NOC approve 403, create-in-Done 400, WM Materials-only state, material issue/log/submit/check, shift import (incl. unknown-person skip). No live-browser visual check in this VM.
 - **v1.7.0** — Visual parity pass vs the Muse prototype (same look for the same view, language, and theme; code underneath still differs). Header: theme toggle labels now match the prototype ("Dark mode" / "Light mode", "Mode gelap" / "Mode terang"). Kanban/To-Do: evidence badge, priority pills, and due dates now translate in ID; empty-column fallback renders correctly. Calendar: CSV "Preview import" button and match cells now translate in ID. Materials: "Add line" / "Issue morning material" buttons and day status (Terbuka / Terkirim / Disetujui / Ditandai) now translate in ID; the "Issue more" button no longer misuses the "Issued." toast string as its label; log/issue forms now use flex rows that wrap on phone width. Task panel: approval note and approval toast now translate in ID. Fixed 9 empty-state fallbacks (Overview, Board, Materials, task panel) that rendered the literal text `${tr('…')}` instead of the translated string. Toast no longer overrides the dark theme with an inline background (error toasts use a CSS class instead). English priorities now render capitalised ("Normal" / "High" / "Urgent"). No logic, roles, approval rules, or API behaviour changed; `server.js` untouched. Verified with a DOM-stub runtime test: every view renders in EN/light and ID/dark, full and empty states, with zero JS errors and no English leakage in ID mode. No live-browser visual check in this VM — remaining pixel-level differences (if any) still need a side-by-side screenshot check.
 - **v1.6.0** — Dark / light mode toggle in the header (🌙 Dark / ☀️ Light, 🌙 Gelap / ☀️ Terang in Indonesian), persisted in `localStorage` (`tmd-theme`), default light, applied before first paint. Dark theme is a `data-theme="dark"` override block in `styles.css` covering all views, panels, modals, tables, inputs, pills and toast. No logic, roles, approval rules, or API behaviour changed.
 - **v1.5.0** — Restyled the standalone to match the Muse prototype: same navy/blue/teal palette, now with soft shadows, 12–14px rounded cards/panels/columns, stat cards with coloured left accents, Kanban task cards that lift on hover, a gradient navy topbar, pill nav with shadow, cleaner tables, and rounded buttons/inputs/modals. CSS/layout only — no logic, roles, approval rules, i18n strings, or API behaviour changed; no external fonts/CDN.
@@ -89,11 +98,12 @@ over Tailscale.
 
 ## Stack
 
-Node.js 22+ + Express + SQLite (`node:sqlite`, no native addons) + vanilla
-HTML/CSS/JS. No build step. Data lives in `data/app.db` (created + seeded on
-first run with clearly-labeled **demo** data — 10 mock people, 10 tasks,
-shifts around today, yesterday/today material days). Uploads live in
-`uploads/`.
+Node.js 22+ + Express + SQLite (`node:sqlite`, no native addons) + React 18
++ TypeScript, built with Vite (`client/`, output `dist/`). The server serves
+the built frontend and the API on the same port 3000. Data lives in
+`data/app.db` (created + seeded on first run with clearly-labeled **demo**
+data — 10 mock people, 10 tasks, shifts around today, yesterday/today
+material days). Uploads live in `uploads/`.
 
 ## Run it
 
@@ -104,8 +114,17 @@ git clone https://github.com/raivold/team-management-dashboard.git
 cd team-management-dashboard
 cp .env.example .env   # optional, defaults work
 npm install
+npm run build          # build the React frontend into dist/
 node server.js         # or: npm start
 # open http://<vm-ip>:3000
+```
+
+For development, run the API server and the Vite dev server in two
+terminals (Vite on port 5173 proxies `/api` to the Express server on 3000):
+
+```bash
+npm run dev:server     # terminal 1: Express + API on :3000
+npm run dev            # terminal 2: Vite dev server on :5173
 ```
 
 To keep it running after you log out, use systemd or `pm2`:

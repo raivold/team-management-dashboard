@@ -5,3 +5,6 @@ uploads/
 *.db
 *.db-journal
 .DS_Store
+
+# React build output (built on deploy with `npm run build`)
+dist/
