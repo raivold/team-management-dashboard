@@ -27,7 +27,12 @@ starts, but the React build in `dist/` is the served frontend once built
   new work is created there; the other columns are states a task moves into,
   not entry points. (Enforced server-side too: creating a task straight into
   In Progress, Waiting, Pending Approval or Done is rejected.)
-- **To-Do list:** same tasks, grouped by assignee.
+- **Log — monthly log and report:** month grid where each day shows counts
+  of tasks completed, material lines logged, and shifts on duty. Click a day
+  for its detail (completed tasks, material used/returned with where-it-went
+  notes, shifts). Monthly summary panel: tasks completed, material
+  issued/used/returned with variance, shifts per person, plus a CSV export
+  of the month's report. No planning here: tasks appear by completion date.
 - **Roles & approval (server-enforced, not just hidden in the UI):**
   - **Head NOC (Rivaldo)** — approves anything.
   - **OSP (Fajar Nugroho)** — drops projects (new ODP, new link, expansion)
@@ -43,7 +48,6 @@ starts, but the React build in `dist/` is the served frontend once built
     requests to task/board/calendar/team/activity endpoints (403).
   - **Field techs (Agus, Dedi, Joko, Rina)** — assignee-only, **no login**.
   - NOC / CS / Warehouse cannot approve a task to Done.
-- **Calendar:** tasks by due date + shifts, day detail, who's on board.
 - **Shift import:** CSV upload or paste, preview with name matching,
   replace-on-reimport (no duplicates). Template at `/api/shifts/template.csv`
   — columns: `Date | Name | Shift | Start | End | Department | Notes`.
@@ -85,6 +89,7 @@ starts, but the React build in `dist/` is the served frontend once built
 
 ## Changelog
 
+- **v2.1.0** — To-Do view removed (it duplicated the Kanban); Calendar is now the Log view: month grid shows per-day counts of tasks completed, material lines logged, and shifts on duty; click a day for its detail (completed tasks, material used/returned with where-it-went notes, shifts); monthly summary panel with tasks completed, material issued/used/returned with variance, shifts per person, and a CSV export of the month's report. Shift import stays in the Log view, unchanged. Completion dates come from the existing server-set completedAt (approve-to-Done time); no migration, no new API endpoint. No role/approval/material-flow changes. Verified: build passes, typecheck clean, throwaway-server API flows pass, Log view server-rendered in EN + ID with zero JS errors and no To-Do/Calendar leftovers. No live-browser visual check in this VM. Also in this release: left sidebar replaces the top pill nav (desktop collapse to icons, phone slide-in drawer, Board/Materials count badges); Activity merged into the Log view (one scroll: monthly report, then the activity feed below); frontend restyled with Ant Design v5 (Layout/Sider/Menu, Table, Modal, Form, notification toasts, EN/ID antd locales) keeping the navy/teal theme tokens — Kanban drag-drop and the Log month grid stay custom. No role/approval/material-flow/API changes.
 - **v2.0.2** — Antislop audit fixes, all 8 HIGH findings: no em dashes in rendered text (EN/ID strings, document title, page title, seed titles and activity strings); muted text and dark placeholder now pass WCAG AA 4.5:1; dark focus colour passes 3:1; control borders pass 3:1 in both themes via one border token per theme; interactive targets raised to 44px; base-layer pointer cursor (task cards keep grab for drag); Move-to select named and compact form rows labelled; task titles are real buttons, not hash links. No API/DB/role/i18n-key changes. No live-browser visual check in this VM, so the taller buttons and 44px targets still need a look on phone width.
 - **v2.0.1** — Accessibility: icon-only buttons named, Kanban cards/calendar days/evidence photos keyboard-operable, task modal + lightbox are real dialogs (Escape, focus in/out), toasts announced with error toasts kept until dismissed, load-failure Retry, skip link, view changes announced, inputs labelled, tables scroll on phones. Also: untranslated strings fixed in ID mode, header badge now 'Demo data', Share to WhatsApp per task, Download CSV per material day, board filter matches service ID, npm run typecheck. No API/DB/role changes. No live-browser visual check — tab through a card, a modal, and an error toast before merging.
 - **v2.0.0** — Frontend rebuilt in React (Vite + React 18 + TypeScript), like the prototype. Same API, same SQLite DB/schema, same features: Overview, Kanban (drag-drop, Add Task only in Backlog/To Do), To-Do, Calendar + CSV shift import, Materials daily cycle, Team, Activity, evidence photos, EN/ID + dark/light toggles, "Acting as" switcher. The i18n dictionary and the v1.7.0 styles were ported verbatim, so the look and all translations are unchanged. `server.js` only changed to serve the built frontend from `dist/` (falling back to the old vanilla `public/` if `dist/` has not been built yet — the old files are kept in the repo, not deleted). Build with `npm run build`, then `node server.js`; dev is `npm run dev` (Vite, port 5173, proxies `/api` to the Express server on 3000). Docker builds the frontend during image build. `dist/` is gitignored and built on deploy. Verified: `npm run build` passes, `npx tsc --noEmit` clean, full-stack run on a throwaway DB — create/move/approve-as-Head-NOC, NOC approve 403, create-in-Done 400, WM Materials-only state, material issue/log/submit/check, shift import (incl. unknown-person skip). No live-browser visual check in this VM.
