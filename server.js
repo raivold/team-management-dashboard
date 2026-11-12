@@ -1,11 +1,14 @@
 // Team Management Dashboard — standalone, self-hostable version.
 // Node.js + Express + SQLite (node:sqlite, no native addons), React frontend
 // (Vite build output in dist/, built with `npm run build`).
-// Single-user demo auth: the client sends `actorId` ("Acting as" switcher).
-// All approval / material-cycle rules are enforced here on the server,
-// never only in the UI.
+// Auth: passwords + 48h sessions by default. The client never sends an
+// actorId the server trusts: identity comes from the session cookie.
+// DEMO_ACTING_AS=true restores the old demo "Acting as" switcher (local
+// dev/demo only, off by default). All approval / material-cycle rules
+// are enforced here on the server, never only in the UI.
 import express from 'express';
 import { DatabaseSync } from 'node:sqlite';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +17,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'app.db');
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
+// Demo flag: when true, the old "Acting as" switcher is the auth and the
+// login page is skipped. Default off. Dev/demo only, never for team use.
+const DEMO_ACTING_AS = process.env.DEMO_ACTING_AS === 'true';
+// Sessions last 48 hours, absolute (not sliding): the clock starts at
+// login and is never extended by activity, so "stay logged in until
+// 48 hours" means the same thing every time and re-login is predictable.
+const SESSION_TTL_MS = 48 * 60 * 60 * 1000;
+const COOKIE_NAME = 'tmd_session';
+// Secure cookies only when the deploy is behind HTTPS; the Tailscale
+// setup is plain http, so this stays off unless COOKIE_SECURE=true.
+const COOKIE_SECURE = process.env.COOKIE_SECURE === 'true';
 
 fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -58,6 +72,19 @@ CREATE TABLE IF NOT EXISTS activity (
   id INTEGER PRIMARY KEY AUTOINCREMENT, actorId INTEGER, taskId INTEGER,
   text TEXT NOT NULL, createdAt TEXT NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_shifts_person_date ON shifts(personId, date);
+-- Login accounts + sessions. An account belongs to one person (the
+-- person carries the NOC role/department; isAdmin is a separate app
+-- capability, not a role). Passwords are scrypt hashes (salt:hash hex),
+-- never plaintext. Sessions are server-side rows; the cookie only
+-- carries a random token.
+CREATE TABLE IF NOT EXISTS accounts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, personId INTEGER NOT NULL UNIQUE,
+  username TEXT NOT NULL UNIQUE, passwordHash TEXT NOT NULL,
+  isAdmin INTEGER NOT NULL DEFAULT 0, disabled INTEGER NOT NULL DEFAULT 0,
+  mustChangePassword INTEGER NOT NULL DEFAULT 0, createdAt TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY, accountId INTEGER NOT NULL,
+  createdAt TEXT NOT NULL, expiresAt TEXT NOT NULL);
 `);
 // Migration for existing databases: free-text "where it went" note on
 // material lines. Optional, defaults to empty — old lines keep working.
@@ -78,14 +105,28 @@ function getPerson(id) {
   return id == null ? null : db.prepare('SELECT * FROM people WHERE id=?').get(id);
 }
 function actorFrom(req) {
-  const id = req.body?.actorId ?? req.query?.actorId;
-  const p = getPerson(id == null ? null : Number(id));
-  return p && p.active ? p : null;
+  // req.auth is set by the /api middleware below; fall back to resolving
+  // directly so this also works if called outside that middleware.
+  if (req.auth) return req.auth.person;
+  return resolveAuth(req)?.person ?? null;
 }
 function requireActor(req, res) {
-  const a = actorFrom(req);
-  if (!a) { res.status(401).json({ error: 'Unknown or inactive user. Pick a person in the "Acting as" switcher.' }); return null; }
+  const a = req.auth?.person ?? actorFrom(req);
+  if (!a) {
+    res.status(401).json({ error: DEMO_ACTING_AS
+      ? 'Unknown or inactive user. Pick a person in the "Acting as" switcher.'
+      : 'Please log in.' });
+    return null;
+  }
   return a;
+}
+function requireAdmin(req, res) {
+  const actor = requireActor(req, res); if (!actor) return null;
+  if (!req.auth?.account?.isAdmin) {
+    res.status(403).json({ error: 'Only the app admin can do that.' });
+    return null;
+  }
+  return actor;
 }
 // Warehouse Manager sees Materials only — enforced server-side, not just
 // by hiding navigation in the UI. WM may only use the material endpoints
@@ -223,6 +264,76 @@ function seedIfEmpty() {
 }
 seedIfEmpty();
 
+// ---- Auth helpers (scrypt via node:crypto, no new dependencies) ----
+function hashPassword(pw) {
+  const salt = crypto.randomBytes(16);
+  return salt.toString('hex') + ':' + crypto.scryptSync(pw, salt, 64).toString('hex');
+}
+function checkPassword(pw, stored) {
+  const parts = String(stored || '').split(':');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return false;
+  const hash = crypto.scryptSync(pw, Buffer.from(parts[0], 'hex'), 64);
+  const expected = Buffer.from(parts[1], 'hex');
+  return hash.length === expected.length && crypto.timingSafeEqual(hash, expected);
+}
+function publicAccount(acc) {
+  return {
+    id: acc.id, personId: acc.personId, username: acc.username,
+    isAdmin: !!acc.isAdmin, disabled: !!acc.disabled,
+    mustChangePassword: !!acc.mustChangePassword, createdAt: acc.createdAt,
+  };
+}
+// First-run admin account: created only when the accounts table is
+// empty (fresh DB, or an existing DB from before login existed). The
+// one-time password is printed once to the server log and never stored
+// in plain text; the admin must change it on first login. Only this
+// account is seeded — Rivaldo creates every other account himself
+// through the Admin view.
+function seedAdminIfEmpty() {
+  const count = db.prepare('SELECT COUNT(*) c FROM accounts').get().c;
+  if (count > 0) return;
+  const rivaldo = db.prepare('SELECT * FROM people WHERE id=1').get();
+  if (!rivaldo) return;
+  const otp = crypto.randomBytes(9).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
+  db.prepare(`INSERT INTO accounts (personId,username,passwordHash,isAdmin,disabled,mustChangePassword,createdAt)
+    VALUES (?,?,?,1,0,1,?)`).run(rivaldo.id, 'rivaldo', hashPassword(otp), nowIso());
+  console.log('--- First run: admin account created ---');
+  console.log('Admin username: rivaldo');
+  console.log(`Admin one-time password: ${otp}`);
+  console.log('Log in with it, then change the password (you will be asked).');
+  console.log('Create the rest of the team accounts from the Admin view.');
+}
+seedAdminIfEmpty();
+
+// Resolve the caller's identity for /api requests. In login mode
+// (default) identity comes ONLY from the session cookie: a client-sent
+// actorId is ignored entirely, so a forged actorId can never escalate
+// a session. In demo mode the old actorId behaviour applies.
+function sessionPerson(req) {
+  const m = (req.headers.cookie || '').match(/(?:^|;\s*)tmd_session=([^;]+)/);
+  if (!m) return null;
+  const token = decodeURIComponent(m[1]);
+  const s = db.prepare('SELECT * FROM sessions WHERE token=?').get(token);
+  if (!s) return null;
+  if (new Date(s.expiresAt).getTime() <= Date.now()) {
+    db.prepare('DELETE FROM sessions WHERE token=?').run(token);
+    return null;
+  }
+  const acc = db.prepare('SELECT * FROM accounts WHERE id=? AND disabled=0').get(s.accountId);
+  if (!acc) return null;
+  const person = getPerson(acc.personId);
+  if (!person || !person.active) return null;
+  return { account: acc, person, session: s };
+}
+function resolveAuth(req) {
+  if (DEMO_ACTING_AS) {
+    const id = req.body?.actorId ?? req.query?.actorId;
+    const p = getPerson(id == null ? null : Number(id));
+    return p && p.active ? { account: null, person: p, session: null, demo: true } : null;
+  }
+  return sessionPerson(req);
+}
+
 // ---- API ----
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -271,18 +382,175 @@ const WM_ALLOWED = [
   ['GET', /^\/api\/material-days$/],
   ['POST', /^\/api\/material-days\/[^/]+\/issue$/],
   ['POST', /^\/api\/material-days\/\d+\/check$/],
+  // Auth endpoints every logged-in user needs, WM included: the boot
+  // me-check, logout, and the forced first-login password change
+  // (without it a WM account could never get past mustChangePassword).
+  ['GET', /^\/api\/auth\/me$/],
+  ['POST', /^\/api\/auth\/logout$/],
+  ['POST', /^\/api\/auth\/change-password$/],
+];
+// Auth gate for /api, runs before every route handler below.
+// Resolves req.auth, then: in login mode (default) every /api request
+// needs a valid session, except GET /api/health and POST /api/auth/login.
+// In demo mode no session is needed and the old actorId behaviour
+// applies. The WM gate runs in the same middleware so it sees the same
+// resolved identity (session person, never a client-sent actorId).
+const AUTH_OPEN = [
+  ['GET', /^\/api\/health$/],
+  ['POST', /^\/api\/auth\/login$/],
 ];
 app.use('/api', (req, res, next) => {
-  const a = actorFrom(req);
+  req.auth = resolveAuth(req);
   // req.path is mount-relative inside app.use('/api'), so match on the full URL path.
   const fullPath = req.originalUrl.split('?')[0];
-  if (isWarehouseManager(a) && !WM_ALLOWED.some(([m, re]) => req.method === m && re.test(fullPath))) {
+  if (!DEMO_ACTING_AS && !req.auth && !AUTH_OPEN.some(([m, re]) => req.method === m && re.test(fullPath))) {
+    return res.status(401).json({ error: 'Please log in.' });
+  }
+  if (isWarehouseManager(req.auth?.person) && !WM_ALLOWED.some(([m, re]) => req.method === m && re.test(fullPath))) {
     return res.status(403).json({ error: WM_ONLY_ERROR });
   }
   next();
 });
 app.get('/api/state', (req, res) => res.json(fullState(actorFrom(req))));
 app.get('/api/health', (req, res) => res.json({ ok: true, today: dayStr(new Date()) }));
+
+// --- Auth: login, sessions, admin accounts ---
+// Sessions are server-side rows; the cookie only carries a random
+// token (httpOnly, SameSite=Lax so a cross-site POST cannot ride it,
+// Path=/, 48h Max-Age). No CSRF token: the app and the API are same
+// origin, and SameSite=Lax blocks cross-site form/fetch POSTs from
+// sending the cookie. Passwords are scrypt hashes, never logged or
+// returned. Login failures answer the same generic message whether
+// the username or the password was wrong (no user enumeration).
+function setSessionCookie(res, token) {
+  const parts = [`${COOKIE_NAME}=${token}`, 'HttpOnly', 'SameSite=Lax', 'Path=/', `Max-Age=${SESSION_TTL_MS / 1000}`];
+  if (COOKIE_SECURE) parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+function clearSessionCookie(res) {
+  const parts = [`${COOKIE_NAME}=`, 'HttpOnly', 'SameSite=Lax', 'Path=/', 'Max-Age=0'];
+  if (COOKIE_SECURE) parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+function createSession(accountId) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const now = new Date();
+  db.prepare('INSERT INTO sessions (token,accountId,createdAt,expiresAt) VALUES (?,?,?,?)')
+    .run(token, accountId, now.toISOString(), new Date(now.getTime() + SESSION_TTL_MS).toISOString());
+  return token;
+}
+// Login brute-force throttle: in-memory, per username. 5 failed
+// attempts in 10 minutes -> 429. Resets on a successful login.
+const loginAttempts = new Map();
+function loginThrottled(username) {
+  const rec = loginAttempts.get(username);
+  if (!rec) return false;
+  if (Date.now() - rec.firstAt > 10 * 60 * 1000) { loginAttempts.delete(username); return false; }
+  return rec.count >= 5;
+}
+function recordLoginFail(username) {
+  const rec = loginAttempts.get(username) || { count: 0, firstAt: Date.now() };
+  rec.count++;
+  loginAttempts.set(username, rec);
+}
+
+app.post('/api/auth/login', (req, res) => {
+  if (DEMO_ACTING_AS) return res.status(400).json({ error: 'Demo mode is on: log in is skipped, use the "Acting as" switcher.' });
+  const username = String(req.body?.username || '').trim();
+  const password = String(req.body?.password || '');
+  if (loginThrottled(username)) return res.status(429).json({ error: 'Too many failed logins. Try again in a few minutes.' });
+  const acc = db.prepare('SELECT * FROM accounts WHERE username=?').get(username);
+  if (!acc || acc.disabled || !checkPassword(password, acc.passwordHash)) {
+    recordLoginFail(username);
+    return res.status(401).json({ error: 'Invalid username or password.' });
+  }
+  loginAttempts.delete(username);
+  const token = createSession(acc.id);
+  setSessionCookie(res, token);
+  res.json({ account: publicAccount(acc), person: getPerson(acc.personId), mustChangePassword: !!acc.mustChangePassword });
+});
+app.post('/api/auth/logout', (req, res) => {
+  if (req.auth?.session) db.prepare('DELETE FROM sessions WHERE token=?').run(req.auth.session.token);
+  clearSessionCookie(res);
+  res.json({ ok: true });
+});
+app.get('/api/auth/me', (req, res) => {
+  if (DEMO_ACTING_AS) return res.json({ demo: true });
+  if (!req.auth) return res.status(401).json({ error: 'Please log in.' });
+  res.json({ demo: false, account: publicAccount(req.auth.account), person: req.auth.person, mustChangePassword: !!req.auth.account.mustChangePassword });
+});
+app.post('/api/auth/change-password', (req, res) => {
+  if (DEMO_ACTING_AS) return res.status(400).json({ error: 'Demo mode is on: there are no passwords to change.' });
+  const actor = requireActor(req, res); if (!actor) return;
+  const acc = req.auth.account;
+  const currentPassword = String(req.body?.currentPassword || '');
+  const newPassword = String(req.body?.newPassword || '');
+  if (!checkPassword(currentPassword, acc.passwordHash))
+    return res.status(401).json({ error: 'Current password is wrong.' });
+  if (newPassword.length < 8)
+    return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+  db.prepare('UPDATE accounts SET passwordHash=?, mustChangePassword=0 WHERE id=?').run(hashPassword(newPassword), acc.id);
+  // Invalidate every other session of this account; the current one
+  // stays valid so the password change does not log the user out.
+  db.prepare('DELETE FROM sessions WHERE accountId=? AND token<>?').run(acc.id, req.auth.session.token);
+  res.json({ ok: true });
+});
+
+// Admin accounts: only the app admin (Rivaldo). Account creation is
+// separate from the NOC roles: the person carries the role/department,
+// the account just proves who is sitting at the keyboard. New accounts
+// must change their first password on first login. Field technicians
+// have no account, same as before.
+app.get('/api/admin/accounts', (req, res) => {
+  const actor = requireAdmin(req, res); if (!actor) return;
+  res.json(db.prepare(`
+    SELECT a.id, a.personId, a.username, a.isAdmin, a.disabled, a.mustChangePassword, a.createdAt,
+           p.name AS personName, p.role AS personRole, p.department AS personDepartment
+    FROM accounts a JOIN people p ON p.id = a.personId ORDER BY p.name`).all());
+});
+app.post('/api/admin/accounts', (req, res) => {
+  const actor = requireAdmin(req, res); if (!actor) return;
+  const personId = Number(req.body?.personId);
+  const username = String(req.body?.username || '').trim();
+  const password = String(req.body?.password || '');
+  const isAdmin = req.body?.isAdmin ? 1 : 0;
+  const person = getPerson(personId);
+  if (!person || !person.active) return res.status(400).json({ error: 'Person not found or inactive.' });
+  if (person.role === 'field_tech') return res.status(400).json({ error: 'Field technicians have no account. They are assignees only.' });
+  if (!username) return res.status(400).json({ error: 'Username is required.' });
+  if (password.length < 8) return res.status(400).json({ error: 'First password must be at least 8 characters.' });
+  const existing = db.prepare('SELECT id FROM accounts WHERE personId=? OR username=?').get(personId, username);
+  if (existing) return res.status(400).json({ error: 'That person already has an account, or the username is taken.' });
+  const r = db.prepare(`INSERT INTO accounts (personId,username,passwordHash,isAdmin,disabled,mustChangePassword,createdAt)
+    VALUES (?,?,?, ?,0,1,?)`).run(personId, username, hashPassword(password), isAdmin, nowIso());
+  logActivity(actor.id, null, `created an account for ${person.name} (${username})`);
+  res.status(201).json({ id: r.lastInsertRowid });
+});
+app.post('/api/admin/accounts/:id/reset-password', (req, res) => {
+  const actor = requireAdmin(req, res); if (!actor) return;
+  const password = String(req.body?.password || '');
+  if (password.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters.' });
+  const acc = db.prepare('SELECT * FROM accounts WHERE id=?').get(req.params.id);
+  if (!acc) return res.status(404).json({ error: 'Account not found.' });
+  db.prepare('UPDATE accounts SET passwordHash=?, mustChangePassword=1 WHERE id=?').run(hashPassword(password), acc.id);
+  db.prepare('DELETE FROM sessions WHERE accountId=?').run(acc.id);
+  logActivity(actor.id, null, `reset the password for account ${acc.username}`);
+  res.json({ ok: true });
+});
+app.post('/api/admin/accounts/:id/set-disabled', (req, res) => {
+  const actor = requireAdmin(req, res); if (!actor) return;
+  const disabled = req.body?.disabled ? 1 : 0;
+  const acc = db.prepare('SELECT * FROM accounts WHERE id=?').get(req.params.id);
+  if (!acc) return res.status(404).json({ error: 'Account not found.' });
+  if (acc.id === req.auth.account.id) return res.status(400).json({ error: 'You cannot disable your own account.' });
+  if (disabled && acc.isAdmin) {
+    const otherAdmins = db.prepare('SELECT COUNT(*) c FROM accounts WHERE isAdmin=1 AND disabled=0 AND id<>?').get(acc.id).c;
+    if (otherAdmins === 0) return res.status(400).json({ error: 'Cannot disable the last enabled admin account.' });
+  }
+  db.prepare('UPDATE accounts SET disabled=? WHERE id=?').run(disabled, acc.id);
+  if (disabled) db.prepare('DELETE FROM sessions WHERE accountId=?').run(acc.id);
+  res.json({ ok: true });
+});
 
 // --- Tasks ---
 app.post('/api/tasks', (req, res) => {
@@ -607,4 +875,7 @@ app.use((req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Team Management Dashboard listening on http://0.0.0.0:${PORT}`);
   console.log(`Database: ${DB_PATH}`);
+  console.log(DEMO_ACTING_AS
+    ? 'Auth: DEMO mode (Acting as switcher, no login). Dev/demo only.'
+    : 'Auth: login required (sessions last 48h).');
 });

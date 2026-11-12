@@ -7,8 +7,8 @@
 // Button, Select, Input, Segmented, Tag, Badge, Statistic, notification);
 // the Kanban drag-and-drop and the Log month grid stay custom code inside
 // the antd layout, because antd has no Kanban/calendar-grid that fits.
-// Theme tokens keep the dashboard's navy/teal identity, not antd's
-// default blue. Dark mode uses antd's dark algorithm.
+// Theme tokens use Catppuccin (Latte light, Mocha dark) with a teal
+// primary; dark mode uses antd's dark algorithm.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   App as AntdApp, Badge, Button, Card, ConfigProvider, Input, Layout, Menu,
@@ -20,10 +20,11 @@ import enUS from 'antd/locale/en_US';
 import idID from 'antd/locale/id_ID';
 import {
   AppstoreOutlined, CameraOutlined, DashboardOutlined, DeleteOutlined,
-  EditOutlined, HistoryOutlined, InboxOutlined, MenuOutlined, MoonOutlined,
+  EditOutlined, HistoryOutlined, InboxOutlined, KeyOutlined, MenuOutlined, MoonOutlined,
   PlusOutlined, SearchOutlined, SunOutlined, TeamOutlined,
 } from '@ant-design/icons';
-import { api, fetchState } from './api';
+import { api, fetchState, getMe, logout, setOnAuthError, AuthError, type Me } from './api';
+import { AdminView, ChangePasswordForm, LoginPage, LogoutButton } from './Auth';
 import {
   tr, tCol, tPri, tKind, tDept, tRole, tStatus, isEntryColumn, todayStr, ydayStr,
   type ConfirmFn, type DailyLine, type Lang, type State, type Task, type Column,
@@ -33,57 +34,114 @@ import { TeamView } from './TeamActivity';
 import { TaskDetail, NewTaskForm, type ModalCtx } from './TaskModal';
 import PromptModal from './PromptModal';
 
-type View = 'overview' | 'board' | 'log' | 'materials' | 'team';
+type View = 'overview' | 'board' | 'log' | 'materials' | 'team' | 'admin';
 const VIEWS: View[] = ['overview', 'board', 'log', 'materials', 'team'];
 
-// ---- antd theme: the dashboard's own palette as seed tokens ----
-// colorPrimary #1466c2 (existing primary blue), colorSuccess #2e7d6b
-// (existing teal), colorError #b42318 (existing red), colorWarning
-// #b45309 (the warnbox amber). controlHeight 44 keeps every control on
-// the 44px tap-target rule; controlHeightSM 44 keeps small buttons at
-// 44px too (the v2.0.2 finding-5 fix). borderRadius 10 matches the
-// existing 10px control radius. colorBgLayout is the page background
-// (#f4f6f8 light, #0e1626 dark); colorBorder keeps the v2.0.2 border
-// tokens (#71809a light, #7c8aa0 dark) instead of antd's pale defaults,
-// so input/card/table borders still meet 3:1. Dark link colours are
-// overridden to the light blue #7fb3ec: antd's dark algorithm derives a
-// dark link blue from the seed, which is unreadable as text on dark
-// surfaces (the old CSS used #7fb3ec for the same reason).
+// ---- antd theme: Catppuccin palette (Latte light, Mocha dark), teal primary ----
+// Palette source: https://raw.githubusercontent.com/catppuccin/palette/main/palette.json
+// v1.8.0 (repo catppuccin/palette). Latte teal #179299, Mocha teal #94e2d5.
+// Same seeds as the prototype migration, so the two versions match:
+// raw Latte accents fail as text on white (teal #179299 3.74:1, green
+// #40a02b 3.34:1, peach #fe640b 2.98:1), so the seeds are documented
+// darkened derivatives — light primary #0b6a73 is antd's own derivation
+// of Latte teal, dark primary seed #179299 derives #177f85 with text
+// #94e2d5. controlHeight 44 keeps every control on the 44px tap-target
+// rule; controlHeightSM 44 keeps small buttons at 44px too (the v2.0.2
+// finding-5 fix). borderRadius 10 matches the existing 10px control
+// radius. The navy identity is gone by design: Mocha's darkest is
+// crust #11111b, near-black with a purple tint, not navy.
+// Contrast: text-facing tokens use same-hue darkened overrides (green
+// #2d701e 6.09:1, warning #b93d00 5.15:1 on its bg, info #0f6478
+// 6.02:1 on its bg, error text #ab032d 6.37:1 on its bg). Mocha
+// accents all pass as text on base. The dark algorithm derives
+// colorLink from its input token (#94e2d5 -> #81c3b8, 8.15:1 on base);
+// with the seed #177f85 as the input it derives to #176f74 (3.46:1,
+// fails), so the dark colorLink input is the raw Mocha teal, not the
+// seed. Every other pinned token below was verified to stick via
+// theme.getDesignToken. Dark danger buttons use Latte red #d20f39 via
+// the Button component token: Mocha red #f38ba8 is too light for the
+// white solid text (3.04:1 on the effective #d27992), while Latte red
+// is 5.43:1. All 84 checked pairs pass (see /tmp/catppuccin-pairs.py).
 const SEED_TOKENS = {
-  colorPrimary: '#1466c2',
-  colorSuccess: '#2e7d6b',
-  colorError: '#b42318',
-  colorWarning: '#b45309',
-  colorInfo: '#1466c2',
-  colorLink: '#1466c2',
+  colorPrimary: '#0b6a73',
+  colorSuccess: '#40a02b',
+  colorError: '#d20f39',
+  colorWarning: '#fe640b',
+  colorInfo: '#209fb5',
+  colorLink: '#0b6a73',
   borderRadius: 10,
   controlHeight: 44,
   controlHeightSM: 44,
   fontFamily: 'system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif',
 };
-const LIGHT_THEME: ThemeConfig = {
-  token: { ...SEED_TOKENS, colorBgBase: '#ffffff', colorBgLayout: '#f4f6f8', colorBorder: '#71809a', colorBorderSecondary: '#71809a' },
+export const LIGHT_THEME: ThemeConfig = {
+  token: {
+    ...SEED_TOKENS,
+    colorBgBase: '#ffffff', colorBgLayout: '#eff1f5',
+    colorBorder: '#5c5f77', colorBorderSecondary: '#5c5f77',
+    colorText: '#4c4f69', colorTextSecondary: '#5c5f77', colorTextTertiary: '#5c5f77',
+    colorTextPlaceholder: '#5c5f77',
+    // Pinned derived tokens: the default algorithm derives muddy
+    // mid-tone tints from a dark teal seed (colorPrimaryBg #a1b3b1,
+    // 2.89:1 for primary text on it), so the tints and the text colours
+    // that sit on them are pinned to measured values.
+    colorPrimaryBg: '#d8ecec', colorPrimaryBgHover: '#c2e0de',
+    colorPrimaryBorder: '#0b6a73', colorPrimaryBorderHover: '#217b80',
+    colorPrimaryTextHover: '#0b6a73', colorLinkHover: '#0b6a73',
+    colorSuccessBg: '#eef5eb', colorSuccessText: '#2d701e',
+    colorErrorText: '#ab032d', colorErrorHover: '#c40e35',
+    colorWarningText: '#b93d00', colorInfoText: '#0f6478',
+  },
   algorithm: antdTheme.defaultAlgorithm,
   components: {
-    // Sidebar Menu: navy selected item, white text (the old pill-nav
-    // active state), light hover. Item height 48 matches the old
-    // sidebar-item min-height; icon size 18 matches the old glyphs.
-    Menu: { itemHeight: 48, iconSize: 18, itemBg: '#ffffff', itemSelectedBg: '#12233a', itemSelectedColor: '#ffffff', itemHoverBg: '#eceff3', itemActiveBg: '#eceff3', itemColor: '#334155' },
-    Table: { headerBg: '#f8fafc', headerColor: '#475569' },
+    // Sidebar Menu: teal selected item, white text; light hover.
+    // Item height 48 matches the old sidebar-item min-height; icon
+    // size 18 matches the old glyphs.
+    Menu: { itemHeight: 48, iconSize: 18, itemBg: '#ffffff', itemSelectedBg: '#0b6a73', itemSelectedColor: '#ffffff', itemHoverBg: '#e6e9ef', itemActiveBg: '#e6e9ef', itemColor: '#4c4f69' },
+    Table: { headerBg: '#e6e9ef', headerColor: '#5c5f77' },
   },
 };
-const DARK_THEME: ThemeConfig = {
+export const DARK_THEME: ThemeConfig = {
   token: {
-    ...SEED_TOKENS, colorBgBase: '#0e1626', colorBgLayout: '#0e1626',
-    colorBorder: '#7c8aa0', colorBorderSecondary: '#7c8aa0',
-    colorLink: '#7fb3ec', colorLinkHover: '#a8c8f5', colorLinkActive: '#5b9bd5', colorPrimaryText: '#7fb3ec',
+    colorPrimary: '#179299',
+    colorSuccess: '#a6e3a1',
+    colorError: '#f38ba8',
+    colorWarning: '#fab387',
+    colorInfo: '#74c7ec',
+    // colorLink input is #94e2d5 (raw Mocha teal): the dark algorithm
+    // derives it to #81c3b8 (8.15:1 on base). With the seed #179299 as
+    // the input it derives to #177f85 (3.46:1, fails), so the input
+    // must be the light teal, not the seed.
+    colorLink: '#94e2d5',
+    borderRadius: 10,
+    controlHeight: 44,
+    controlHeightSM: 44,
+    fontFamily: 'system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif',
+    colorBgBase: '#1e1e2e', colorBgLayout: '#1e1e2e',
+    colorBgContainer: '#313244', colorBgElevated: '#45475a',
+    colorBorder: '#9399b2', colorBorderSecondary: '#9399b2',
+    colorText: '#cdd6f4', colorTextSecondary: '#bac2de', colorTextTertiary: '#bac2de',
+    colorTextPlaceholder: '#a6adc8', colorTextLightSolid: '#ffffff',
+    // Pinned: the dark algorithm derives a near-black primary bg
+    // (#153436) and dim primary text (#176f74, 2.26:1 on that bg), a
+    // dim link hover (#154447) and a dim primary hover (#2d8485,
+    // 4.45:1 with white text); the raw Mocha teal is pinned for the
+    // text/border tokens (8.97:1 on the bg, 8.44:1 on surfaces).
+    colorPrimaryText: '#94e2d5', colorPrimaryTextHover: '#94e2d5',
+    colorPrimaryTextActive: '#94e2d5', colorPrimaryBorder: '#94e2d5',
+    colorPrimaryBorderHover: '#94e2d5', colorPrimaryHover: '#14686d',
+    colorLinkHover: '#94e2d5', colorLinkActive: '#94e2d5',
   },
   algorithm: antdTheme.darkAlgorithm,
   components: {
-    // Dark sidebar: #16233a surface (the old dark sidebar background),
-    // blue #1466c2 selected item (the old dark active state).
-    Menu: { itemHeight: 48, iconSize: 18, itemBg: '#16233a', itemSelectedBg: '#1466c2', itemSelectedColor: '#ffffff', itemHoverBg: '#24365a', itemActiveBg: '#24365a', itemColor: '#cbd5e1' },
-    Table: { headerBg: '#1e2f4d', headerColor: '#94a3b8', rowHoverBg: '#1e2f4d' },
+    // Dark sidebar: crust #11111b surface, teal selected item, crust text.
+    // The Menu is theme="light" (see Sidebar), so the item* tokens
+    // below apply in both modes; no darkItem* tokens are needed.
+    Menu: { itemHeight: 48, iconSize: 18, itemBg: '#181825', itemSelectedBg: '#94e2d5', itemSelectedColor: '#11111b', itemHoverBg: '#313244', itemActiveBg: '#313244', itemColor: '#cdd6f4' },
+    Table: { headerBg: '#313244', headerColor: '#a6adc8', rowHoverBg: '#45475a' },
+    // Danger buttons: Latte red, because Mocha red is too light for
+    // the white solid text (see the token comment above).
+    Button: { colorError: '#d20f39', colorErrorHover: '#c40e35', colorErrorActive: '#ab032d' },
   },
 };
 
@@ -119,7 +177,22 @@ export default function App() {
   const [lang, setLangState] = useState<Lang>(loadLang);
   const [theme, setThemeState] = useState<'light' | 'dark'>(loadTheme);
   const setLang = (l: Lang) => { setLangState(l); try { localStorage.setItem('tmd-lang', l); } catch { /* ignore */ } };
-  const setTheme = (t: 'light' | 'dark') => { setThemeState(t); try { localStorage.setItem('tmd-theme', t); } catch { /* ignore */ } };
+  // Theme switch: set data-theme in the same tick as the state change,
+  // and suppress transitions for two frames. The flash in Rivaldo's
+  // recording came from both halves: antd v5 components carry ~0.2s
+  // background/color transitions, so a theme change cross-faded every
+  // component through a washed-out grey, and data-theme was set in a
+  // post-paint useEffect, so the custom CSS lagged one frame behind the
+  // antd tokens. With data-theme set synchronously and transitions
+  // killed during the switch (see .no-transition in styles.css), the
+  // switch is instant. The useEffect stays for the initial load.
+  const setTheme = (t: 'light' | 'dark') => {
+    document.documentElement.setAttribute('data-theme', t);
+    document.documentElement.classList.add('no-transition');
+    requestAnimationFrame(() => requestAnimationFrame(() => document.documentElement.classList.remove('no-transition')));
+    setThemeState(t);
+    try { localStorage.setItem('tmd-theme', t); } catch { /* ignore */ }
+  };
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
   useEffect(() => { document.documentElement.lang = lang === 'id' ? 'id' : 'en'; }, [lang]);
   return (
@@ -137,6 +210,12 @@ function Dashboard({ lang, theme, setLang, setTheme }: {
 }) {
   const [S, setS] = useState<State | null>(null);
   const [loadError, setLoadError] = useState('');
+  // Auth state: undefined = not checked yet, null = log in required,
+  // Me = logged in (or demo mode, where me.demo is true and the old
+  // "Acting as" switcher is the auth). In login mode actorId is the
+  // logged-in person's id and is never changeable in the UI; in demo
+  // mode it is the switcher value, as before.
+  const [me, setMe] = useState<Me | null | undefined>(undefined);
   const [actorId, setActorId] = useState(() => { try { return Number(localStorage.getItem('actorId') || 1); } catch { return 1; } });
   const [view, setViewState] = useState<View>('overview');
   const [collapsed, setCollapsedState] = useState(loadCollapsed);
@@ -170,8 +249,26 @@ function Dashboard({ lang, theme, setLang, setTheme }: {
     return s;
   }, []);
 
+  // Auth first, state second. A 401 anywhere (here or in any later
+  // api() call, via setOnAuthError) drops back to the login page.
   useEffect(() => {
-    refresh(actorId).catch((e: any) => setLoadError(e.message));
+    setOnAuthError(() => { setMe(null); setS(null); });
+    getMe().then((m) => {
+      setMe(m);
+      if (m.demo) {
+        refresh(actorId).catch((e: any) => setLoadError(e.message));
+      } else if (m.person) {
+        setActorId(m.person.id);
+        refresh(m.person.id).catch((e: any) => {
+          if (e instanceof AuthError) setMe(null);
+          else setLoadError(e.message);
+        });
+      }
+    }).catch((e: any) => {
+      if (e instanceof AuthError) setMe(null);
+      else setLoadError(e.message);
+    });
+    return () => setOnAuthError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -192,7 +289,7 @@ function Dashboard({ lang, theme, setLang, setTheme }: {
   // or on a language switch.
   useEffect(() => {
     if (!S) return;
-    const shown: View = S.people.find((p) => p.id === actorId)?.role === 'warehouse_manager' ? 'materials' : view;
+    const shown: View = S.people.find((p) => p.id === actorId)?.role === 'warehouse_manager' && view !== 'admin' ? 'materials' : view;
     document.title = `Team Management Dashboard · ${tr(lang, 'nav_' + shown)}`;
     if (prevViewRef.current !== null && prevViewRef.current !== shown) mainRef.current?.focus();
     prevViewRef.current = shown;
@@ -220,6 +317,30 @@ function Dashboard({ lang, theme, setLang, setTheme }: {
     };
   }, [drawerOpen, isPhone]);
 
+  // Auth gates: still checking, log in required, or first log in /
+  // reset password change, in that order. Only then the dashboard.
+  if (me === undefined) {
+    return <main><p>Loading dashboard…</p></main>;
+  }
+  if (me === null) {
+    return (
+      <LoginPage lang={lang} theme={theme} setLang={setLang} setTheme={setTheme} onLoggedIn={(m) => {
+        setMe(m);
+        if (m.person) {
+          setActorId(m.person.id);
+          if (!m.mustChangePassword) refresh(m.person.id).catch((e: any) => { if (e instanceof AuthError) setMe(null); else setLoadError(e.message); });
+        }
+      }} />
+    );
+  }
+  if (me.mustChangePassword) {
+    return (
+      <ChangePasswordForm lang={lang} theme={theme} setLang={setLang} setTheme={setTheme} onDone={() => {
+        setMe({ ...me, mustChangePassword: false });
+        if (me.person) refresh(me.person.id).catch((e: any) => { if (e instanceof AuthError) setMe(null); else setLoadError(e.message); });
+      }} />
+    );
+  }
   if (!S) {
     return <main>
       {loadError
@@ -231,7 +352,7 @@ function Dashboard({ lang, theme, setLang, setTheme }: {
 
   const actor = S.people.find((p) => p.id === actorId) || S.people[0];
   const isWM = actor.role === 'warehouse_manager';
-  const currentView: View = isWM ? 'materials' : view;
+  const currentView: View = isWM && view !== 'admin' ? 'materials' : view;
   const personName = (id: number | null | undefined) => S.people.find((p) => p.id === id)?.name || '–';
   const colById = (id: number) => S.columns.find((c) => c.id === id);
   const canApproveTask = (t: Task) => actor.role === 'head_noc' || (actor.role === 'osp' && t.createdById === actor.id);
@@ -239,7 +360,7 @@ function Dashboard({ lang, theme, setLang, setTheme }: {
   const { pending: pendingCount, flagged: flaggedCount } = navCounts(S);
 
   const setCollapsed = (c: boolean) => { setCollapsedState(c); try { localStorage.setItem('tmd-sidebar-collapsed', c ? '1' : '0'); } catch { /* ignore */ } };
-  const switchView = (v: View) => setViewState(isWM ? 'materials' : v);
+  const switchView = (v: View) => setViewState(isWM && v !== 'admin' ? 'materials' : v);
   // One button, two jobs: on desktop it collapses the sidebar to icons
   // only; on phone it opens the sidebar as a drawer (closed by default).
   const toggleSidebar = () => {
@@ -290,21 +411,27 @@ function Dashboard({ lang, theme, setLang, setTheme }: {
           <Button ghost icon={theme === 'dark' ? <SunOutlined /> : <MoonOutlined />} aria-label="Toggle dark / light mode" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
             {theme === 'dark' ? tr(lang, 'theme_light') : tr(lang, 'theme_dark')}
           </Button>
-          <label htmlFor="actorSelect">{tr(lang, 'acting_as')}</label>
-          <Select id="actorSelect" value={actorId} style={{ width: 240 }}
-            options={S.people.filter((p) => p.active && p.role !== 'field_tech').map((p) => ({ value: p.id, label: `${p.name} · ${tDept(lang, p.department)}` }))}
-            onChange={(id) => {
-              setActorId(id);
-              try { localStorage.setItem('actorId', String(id)); } catch { /* ignore */ }
-              refresh(id).catch((err: any) => toast(err.message, false));
-            }} />
-          <Tag style={{ background: '#2e7d6b', color: '#fff', borderColor: '#2e7d6b' }}>{tDept(lang, actor.department)} · {tRole(lang, actor.role)}</Tag>
-          <Tag style={{ background: '#8a6d00', color: '#fff', borderColor: '#8a6d00' }}>{tr(lang, 'demo_badge')}</Tag>
+          {me?.demo ? (
+            <>
+              <label htmlFor="actorSelect">{tr(lang, 'acting_as')}</label>
+              <Select id="actorSelect" value={actorId} style={{ width: 240 }}
+                options={S.people.filter((p) => p.active && p.role !== 'field_tech').map((p) => ({ value: p.id, label: `${p.name} · ${tDept(lang, p.department)}` }))}
+                onChange={(id) => {
+                  setActorId(id);
+                  try { localStorage.setItem('actorId', String(id)); } catch { /* ignore */ }
+                  refresh(id).catch((err: any) => toast(err.message, false));
+                }} />
+              <Tag className="tag-demo">{tr(lang, 'demo_badge')}</Tag>
+            </>
+          ) : (
+            <LogoutButton lang={lang} onClick={async () => { await logout(); setMe(null); setS(null); }} />
+          )}
+          <Tag className="tag-role">{me?.demo ? `${tDept(lang, actor.department)} · ${tRole(lang, actor.role)}` : `${tr(lang, 'logged_in_as')} ${actor.name} · ${tRole(lang, actor.role)}`}</Tag>
         </div>
       </header>
       <Layout>
         <Sidebar
-          lang={lang} currentView={currentView} isWM={isWM}
+          lang={lang} currentView={currentView} isWM={isWM} showAdmin={!!me?.isAdmin}
           collapsed={collapsed} drawerOpen={drawerOpen} isPhone={isPhone} isDark={theme === 'dark'}
           pendingCount={pendingCount} flaggedCount={flaggedCount}
           sidebarRef={sidebarRef}
@@ -314,6 +441,7 @@ function Dashboard({ lang, theme, setLang, setTheme }: {
         {drawerOpen && isPhone && <div className="sidebar-backdrop" aria-hidden="true" onClick={() => { drawerCloseReason.current = 'other'; setDrawerOpen(false); }} />}
         <Layout.Content id="main" ref={mainRef} tabIndex={-1} className="main-content">
           {currentView === 'overview' && <Overview S={S} lang={lang} openTask={openTask} />}
+          {currentView === 'admin' && me?.isAdmin && <AdminView S={S} lang={lang} toast={toast} modal={modalApi} />}
           {currentView === 'board' && (
             <section>
               <div className="board-toolbar">
@@ -358,13 +486,14 @@ function Dashboard({ lang, theme, setLang, setTheme }: {
 // department.
 const NAV_ICONS: Record<View, React.ReactNode> = {
   overview: <DashboardOutlined />, board: <AppstoreOutlined />, log: <HistoryOutlined />, materials: <InboxOutlined />, team: <TeamOutlined />,
+  admin: <KeyOutlined />,
 };
 const NAV_COUNT: Record<View, 'pending' | 'flagged' | null> = {
-  overview: null, board: 'pending', log: null, materials: 'flagged', team: null,
+  overview: null, board: 'pending', log: null, materials: 'flagged', team: null, admin: null,
 };
 
-export function Sidebar({ lang, currentView, isWM, collapsed, drawerOpen, isPhone, isDark, pendingCount, flaggedCount, sidebarRef, onNavigate, onCloseDrawer }: {
-  lang: Lang; currentView: View; isWM: boolean;
+export function Sidebar({ lang, currentView, isWM, showAdmin, collapsed, drawerOpen, isPhone, isDark, pendingCount, flaggedCount, sidebarRef, onNavigate, onCloseDrawer }: {
+  lang: Lang; currentView: View; isWM: boolean; showAdmin: boolean;
   collapsed: boolean; drawerOpen: boolean; isPhone: boolean; isDark: boolean;
   pendingCount: number; flaggedCount: number;
   sidebarRef: { current: HTMLElement | null };
@@ -379,9 +508,18 @@ export function Sidebar({ lang, currentView, isWM, collapsed, drawerOpen, isPhon
       // name carries it ("Board 2"). Collapsed, antd shows the icon only
       // and the label (badge included) becomes the hover tooltip — the
       // same as the old collapsed sidebar, which hid the counts.
-      label: (<span className="menu-label"><span>{tr(lang, 'nav_' + v)}</span>{count > 0 && <Badge count={count} size="small" color="#b42318" />}</span>),
+      label: (<span className="menu-label"><span>{tr(lang, 'nav_' + v)}</span>{count > 0 && <Badge count={count} size="small" color="#d20f39" />}</span>),
     };
   });
+  // Admin is not one of the workflow views: it appears only for the
+  // app admin, after the main nav, and never for anyone else.
+  if (showAdmin) {
+    items.push({
+      key: 'admin',
+      icon: NAV_ICONS.admin,
+      label: (<span className="menu-label"><span>{tr(lang, 'nav_admin')}</span></span>),
+    });
+  }
   const menuRef = useRef<MenuRef>(null);
   // rc-menu marks the selected item with a class only — no aria-selected
   // or aria-current — so the current view would be invisible to
@@ -415,7 +553,7 @@ export function Sidebar({ lang, currentView, isWM, collapsed, drawerOpen, isPhon
   }
   return (
     <Layout.Sider id="sidebar" width={232} collapsedWidth={64} collapsible collapsed={collapsed} trigger={null} theme="light"
-      style={{ background: isDark ? '#16233a' : '#ffffff' }} className="sidebar-antd" aria-label={tr(lang, 'nav_main')}>
+      style={{ background: isDark ? '#181825' : '#ffffff' }} className="sidebar-antd" aria-label={tr(lang, 'nav_main')}>
       {brand}
       {menu}
     </Layout.Sider>
@@ -507,9 +645,9 @@ function TaskCard({ task, S, lang, openTask, moveTask }: { task: Task; S: State;
       <div className="m">{task.customer || task.location || ''}</div>
       <div className="m">
         {task.priority === 'urgent'
-          ? <Tag color="#b42318" style={{ color: '#fff', borderColor: '#b42318' }}>{tPri(lang, task.priority)}</Tag>
+          ? <Tag className="tag-urgent">{tPri(lang, task.priority)}</Tag>
           : task.priority === 'high'
-            ? <Tag color="red">{tPri(lang, task.priority)}</Tag>
+            ? <Tag className="tag-high">{tPri(lang, task.priority)}</Tag>
             : <Tag>{tPri(lang, task.priority)}</Tag>}
         <Tag>{tKind(lang, task.taskKind)}</Tag>
         {task.dueDate ? <span>{tr(lang, 'due_prefix')} {task.dueDate}</span> : null}

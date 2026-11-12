@@ -89,6 +89,7 @@ starts, but the React build in `dist/` is the served frontend once built
 
 ## Changelog
 
+- **v2.2.0** — Real login + Catppuccin recolor. Login: passwords (scrypt hashes) + 48h absolute sessions, Admin view to create/reset/disable accounts, seeded admin `rivaldo` with a one-time password printed once in the server log and a forced change on first login, demo Acting as behind `DEMO_ACTING_AS` (default off), 5 failed logins in 10 minutes returns 429. Catppuccin Latte for light, Mocha for dark, teal primary, navy gone, theme-switch flash fix. Verified: build passes, typecheck clean, 70/70 login API checks, 84/84 contrast pairs, 53/53 render checks, i18n 225/225. No live-browser visual check in this VM: after pulling, check on phone (login, change password, Admin view, dark/light in every view, theme toggle with no grey wash).
 - **v2.1.0** — To-Do view removed (it duplicated the Kanban); Calendar is now the Log view: month grid shows per-day counts of tasks completed, material lines logged, and shifts on duty; click a day for its detail (completed tasks, material used/returned with where-it-went notes, shifts); monthly summary panel with tasks completed, material issued/used/returned with variance, shifts per person, and a CSV export of the month's report. Shift import stays in the Log view, unchanged. Completion dates come from the existing server-set completedAt (approve-to-Done time); no migration, no new API endpoint. No role/approval/material-flow changes. Verified: build passes, typecheck clean, throwaway-server API flows pass, Log view server-rendered in EN + ID with zero JS errors and no To-Do/Calendar leftovers. No live-browser visual check in this VM. Also in this release: left sidebar replaces the top pill nav (desktop collapse to icons, phone slide-in drawer, Board/Materials count badges); Activity merged into the Log view (one scroll: monthly report, then the activity feed below); frontend restyled with Ant Design v5 (Layout/Sider/Menu, Table, Modal, Form, notification toasts, EN/ID antd locales) keeping the navy/teal theme tokens — Kanban drag-drop and the Log month grid stay custom. No role/approval/material-flow/API changes.
 - **v2.0.2** — Antislop audit fixes, all 8 HIGH findings: no em dashes in rendered text (EN/ID strings, document title, page title, seed titles and activity strings); muted text and dark placeholder now pass WCAG AA 4.5:1; dark focus colour passes 3:1; control borders pass 3:1 in both themes via one border token per theme; interactive targets raised to 44px; base-layer pointer cursor (task cards keep grab for drag); Move-to select named and compact form rows labelled; task titles are real buttons, not hash links. No API/DB/role/i18n-key changes. No live-browser visual check in this VM, so the taller buttons and 44px targets still need a look on phone width.
 - **v2.0.1** — Accessibility: icon-only buttons named, Kanban cards/calendar days/evidence photos keyboard-operable, task modal + lightbox are real dialogs (Escape, focus in/out), toasts announced with error toasts kept until dismissed, load-failure Retry, skip link, view changes announced, inputs labelled, tables scroll on phones. Also: untranslated strings fixed in ID mode, header badge now 'Demo data', Share to WhatsApp per task, Download CSV per material day, board filter matches service ID, npm run typecheck. No API/DB/role changes. No live-browser visual check — tab through a card, a modal, and an error toast before merging.
@@ -166,19 +167,63 @@ together with the repo.
    on your tailnet can reach it. The dashboard itself listens on `0.0.0.0:3000`
    but is not exposed to the internet unless you forward a port (don't).
 
-## Auth — read this before real team use
+## Login — passwords + sessions
 
-The prototype uses an **"Acting as" switcher** (demo auth): the client sends
-`actorId` and the server enforces the role rules for that actor. That is
-fine for testing the workflow, but it is **not real login** — anyone who can
-reach the server can pick any role. Before real team use, add proper login
-(passwords / sessions) — that is the planned next step, not part of v1.
-Tailscale already limits reachability to your tailnet, which is the main
-protection in the meantime.
+The dashboard has real login (standalone only; the Muse prototype
+stays a demo and never gets login). One account per person, linked to
+the person who carries the NOC role and department. The app-admin
+capability is separate from the roles: only the admin creates accounts.
+
+- **First run:** start the server and read the server log. It prints
+  a one-time password for the admin account (`rivaldo`, linked to
+  Rivaldo, Head NOC). Log in with it — you are asked to change the
+  password before you can use the app. Only this account is seeded;
+  create every other account yourself from the **Admin** view (pick a
+  person, username, first password). New accounts must also change
+  their first password on first login. Field technicians get no
+  account: they are assignees only, as before.
+- **Admin view** (sidebar, admin only): list of accounts, create
+  account, reset password (the user must change it on first login),
+  disable/enable an account. Disabling also ends that account's
+  sessions. You cannot disable your own account or the last enabled
+  admin.
+- **Sessions last 48 hours, absolute:** the clock starts at login and
+  is never extended by activity, so re-login is predictable. After
+  expiry you log in again. Changing your own password keeps your
+  current session and ends your other sessions.
+- **How it is stored:** passwords are scrypt hashes (Node built-in
+  `crypto`, no new dependencies), never plaintext, never logged or
+  returned. Sessions are server-side rows in SQLite; the cookie only
+  carries a random token (`httpOnly`, `SameSite=Lax`, `Path=/`, 48h
+  `Max-Age`). The cookie is `Secure` only when `COOKIE_SECURE=true`
+  (HTTPS deploys); the plain-http Tailscale setup leaves it off.
+  Identity always comes from the session — a client-sent `actorId`
+  is ignored, so it can never escalate a session.
+- **Brute force:** 5 failed logins for one username in 10 minutes
+  returns 429 for that username. Failures answer the same generic
+  message whether the username or the password was wrong.
+- **CSRF:** the app and the API are same-origin and the cookie is
+  `SameSite=Lax`, which blocks cross-site form/fetch POSTs from
+  sending it. No separate CSRF token.
+- **Demo mode:** `DEMO_ACTING_AS=true` restores the old "Acting as"
+  switcher and skips login entirely. Dev/demo only, never for team
+  use. The old vanilla frontend in `public/` predates login and does
+  not support it — it only serves if `dist/` was never built, so build
+  first (`npm run build`).
 
 ## API
 
-All mutations take `actorId` in the JSON body; rules are enforced server-side.
+Identity comes from the session cookie in login mode (a client-sent
+`actorId` is ignored); in demo mode (`DEMO_ACTING_AS=true`) mutations
+take `actorId` in the JSON body, as before. Rules are enforced
+server-side. Unauthenticated `/api/*` requests return 401, except
+`GET /api/health` and `POST /api/auth/login`.
+
+- `POST /api/auth/login` `{username, password}` · `POST /api/auth/logout` ·
+  `GET /api/auth/me` · `POST /api/auth/change-password` `{currentPassword, newPassword}`
+- `GET /api/admin/accounts` · `POST /api/admin/accounts` `{personId, username, password, isAdmin}` ·
+  `POST /api/admin/accounts/:id/reset-password` `{password}` ·
+  `POST /api/admin/accounts/:id/set-disabled` `{disabled}` (app admin only)
 
 - `GET /api/state` — people, columns, tasks (+materials/files), shifts,
   material days (+lines), activity, material names.

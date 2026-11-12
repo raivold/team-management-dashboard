@@ -1,16 +1,24 @@
-/* Team Management Dashboard — Ant Design restyle (v2.1.0 + antd).
+/* Team Management Dashboard — Catppuccin palette (Latte light, Mocha dark).
+   Palette source: https://raw.githubusercontent.com/catppuccin/palette/main/palette.json
+   v1.8.0 (repo catppuccin/palette). Primary accent is teal; the navy
+   identity is gone by design (Mocha's darkest is crust #11111b).
    antd owns buttons, inputs, selects, tables, modals, menus, toasts and
-   tooltips through ConfigProvider tokens (navy/teal identity, not antd's
-   default blue). What stays hand-built here: the navy topbar, the Kanban
-   board, the Log month grid, the sidebar shell around antd's Menu, and
-   the small layout rules antd components do not cover. Anything antd
-   replaced (.btn, .panel, .modal, .toast, .pill, .warnbox, plain table
-   rules, native input rules) is gone from this file. */
+   tooltips through ConfigProvider tokens (App.tsx); the --vars here are
+   the same Catppuccin scale for the hand-built parts: the topbar, the
+   Kanban board, the Log month grid, the sidebar shell around antd's
+   Menu, and the small layout rules antd components do not cover.
+   Anything antd replaced (.btn, .panel, .modal, .toast, .pill, .warnbox,
+   plain table rules, native input rules) is gone from this file.
+   Every text/border pair was measured in Python (WCAG): raw Latte
+   accents fail as text on white, so text-facing uses same-hue darkened
+   overrides (teal #0b6a73, green #2d701e, yellow #915c13); see
+   /tmp/catppuccin-pairs.py, 84 pairs, all pass. The topbar is flat
+   teal in light mode and flat crust in dark mode (same as the
+   prototype); the navy gradient is gone (R-01). */
 :root{
-  --navy:#12233a; --navy-2:#1b3355; --blue:#1466c2; --blue-2:#1a73d1;
-  --teal:#2e7d6b; --red:#b42318; --ink:#1c2430; --ink-2:#334155;
-  --muted:#57687c; --line:#71809a; --bg:#f4f6f8;
-  --card:#fff; --col:#eceff3; --focus:#1466c2;
+  --teal:#0b6a73; --blue:#0b6a73; --red:#d20f39; --ink:#4c4f69; --ink-2:#5c5f77;
+  --muted:#5c5f77; --line:#5c5f77; --bg:#eff1f5;
+  --card:#fff; --col:#e6e9ef; --focus:#0b6a73;
   --shadow-sm:0 1px 2px rgba(16,24,40,.06),0 2px 6px rgba(16,24,40,.04);
   --shadow-md:0 1px 2px rgba(16,24,40,.05),0 8px 20px rgba(16,24,40,.08);
   --shadow-lg:0 24px 60px rgba(15,23,42,.35);
@@ -26,47 +34,68 @@ a:hover{text-decoration:underline}
    (.task keeps cursor:grab below: drag is its primary Kanban action.) */
 a[href],button:not(:disabled),select:not(:disabled),summary,[role="button"],label[for],input[type="checkbox"],input[type="radio"],input[type="file"]{cursor:pointer}
 button:disabled,select:disabled,input:disabled,textarea:disabled{cursor:not-allowed}
+/* Theme switch: App.tsx adds .no-transition to <html> for two frames
+   around a theme change, so antd's ~0.2s background/color transitions
+   cannot cross-fade the page through a washed-out grey (the flash in
+   Rivaldo's recording). The rule must sit on <html> to cover antd's
+   components too. */
+html.no-transition *,html.no-transition *::before,html.no-transition *::after{transition:none!important}
 /* Visually hidden but announced: labels for compact form rows where a
    visible label does not fit (finding 7). */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-h2{margin:4px 0 6px;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--navy)}
-h3{margin:0 0 10px;font-size:16px;font-weight:700;color:var(--navy)}
-h4{margin:16px 0 8px;font-size:15px;font-weight:700;color:var(--navy)}
+h2{margin:4px 0 6px;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+h3{margin:0 0 10px;font-size:16px;font-weight:700;color:var(--ink)}
+h4{margin:16px 0 8px;font-size:15px;font-weight:700;color:var(--ink)}
 ul{margin:6px 0;padding-left:20px}
 li{margin:6px 0}
 
-.skip-link{position:absolute;left:-9999px;top:0;background:var(--navy);color:#fff;padding:10px 16px;min-height:44px;border-radius:0 0 10px 0;z-index:100;font-weight:700}
+.skip-link{position:absolute;left:-9999px;top:0;background:var(--teal);color:#fff;padding:10px 16px;min-height:44px;border-radius:0 0 10px 0;z-index:100;font-weight:700}
 .skip-link:focus{left:0;color:#fff}
 main:focus{outline:none}
 
-/* ---- Topbar ---- */
-.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 24px;background:linear-gradient(180deg,var(--navy-2),var(--navy));color:#fff;box-shadow:0 4px 16px rgba(18,35,58,.28)}
+/* ---- Topbar: flat teal (light) / crust (dark), no gradient (R-01:
+   a gradient needs a purpose). Light text on the teal bar is white
+   with a pale-teal tint (#d8ecec, 5.13:1) for the subtitle/labels. ---- */
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 24px;background:var(--teal);color:#fff;box-shadow:0 4px 16px rgba(11,106,115,.25)}
 .topbar-left{display:flex;align-items:center;gap:12px;min-width:0}
 .topbar h1{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em}
-.sub{margin:4px 0 0;color:#b8c7dd;font-size:13px}
+.sub{margin:4px 0 0;color:#d8ecec;font-size:13px}
 .actor{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.actor label{font-size:13px;color:#dbe4f0;font-weight:600}
+.actor label{font-size:13px;color:#d8ecec;font-weight:600}
 /* The hamburger is an antd text button: its ink defaults to the theme
-   text colour (dark in light mode), so it needs white on the navy bar. */
+   text colour (dark in light mode), so it needs white on the teal bar. */
 .topbar .hamburger-antd{color:#fff}
 .topbar .hamburger-antd:hover{background:rgba(255,255,255,.18);color:#fff}
 .topbar .hamburger-antd .anticon{font-size:18px}
 
-/* ---- App shell: antd Layout + Sider (desktop), custom drawer (phone) ----
-   The Sider is antd's; the brand block and the drawer shell are ours.
-   The drawer keeps the <nav> landmark (not role="dialog") per R-39. */
+/* ---- Login / change-password screens ----
+   No sidebar, no topbar: one centred card on the page background, the
+   app name as plain text (no invented logo art, R-23). The toggles sit
+   above the card so language and theme are choosable before logging in. */
+.login-wrap{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px 16px}
+.auth-toggles{display:flex;gap:10px;align-items:center;justify-content:flex-end;width:min(420px,92vw)}
+.login-card{width:min(420px,92vw)}
+.login-card h1{margin:0 0 4px;font-size:20px;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.login-card h2{margin:18px 0 4px}
 .main-content{padding:22px 24px 32px;max-width:1400px;margin:0 auto}
 .sidebar-antd{position:sticky;top:0;height:100vh;overflow-y:auto;border-right:1px solid var(--line)}
 .sidebar{width:232px;flex:0 0 232px;position:sticky;top:0;align-self:flex-start;background:var(--card);border-right:1px solid var(--line);padding:16px 12px;display:flex;flex-direction:column;gap:4px}
 .sidebar-brand{display:flex;align-items:center;gap:10px;padding:4px 8px 14px;margin-bottom:8px;border-bottom:1px solid var(--line)}
 .brand-tile{width:36px;height:36px;flex:0 0 36px;border-radius:10px;background:var(--teal);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
-.brand-name{font-weight:800;font-size:14px;color:var(--navy);line-height:1.25}
+.brand-name{font-weight:800;font-size:14px;color:var(--ink);line-height:1.25}
 .sidebar-close{display:none}
 .sidebar-backdrop{display:none}
 /* Menu item labels carry the count badge; the text truncates, the badge
    never does. */
 .menu-label{display:flex;align-items:center;gap:8px;min-width:0}
 .menu-label>span:first-child{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ---- Tags with Catppuccin colours (replaces the inline hexes in
+   App.tsx). Solid borders: a translucent tint border fails 3:1. ---- */
+.tag-demo{background:rgba(223,142,29,.16);color:#915c13;border-color:#9c6314}
+.tag-role{background:var(--teal);color:#fff;border-color:var(--teal)}
+.tag-urgent{background:var(--red);color:#fff;border-color:var(--red)}
+.tag-high{background:rgba(210,15,57,.08);color:var(--red);border-color:var(--red)}
 
 /* ---- Layout / views ---- */
 .board-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 16px}
@@ -80,7 +109,7 @@ main:focus{outline:none}
 .stat-warn{border-left:5px solid var(--red)}
 .stat-warn .ant-statistic-content-value{color:var(--red)}
 .stat-ok{border-left:5px solid var(--teal)}
-.stat-ok .ant-statistic-content-value{color:#166534}
+.stat-ok .ant-statistic-content-value{color:#2d701e}
 /* Titles that open a task (Overview due-today, Log completed tasks):
    antd link buttons, reset to read like text links. */
 .ant-btn.link-btn{padding:0;height:auto;white-space:normal;text-align:left;line-height:1.4;font-weight:600}
@@ -97,16 +126,16 @@ main:focus{outline:none}
 .board{display:flex;gap:16px;overflow-x:auto;padding:4px 2px 16px;scroll-snap-type:x mandatory}
 .column{background:var(--col);border:1px solid var(--line);border-radius:var(--r);min-width:280px;max-width:320px;flex:1;padding:12px;scroll-snap-align:start;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),var(--shadow-sm)}
 .column h3{margin:2px 2px 12px;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:8px}
-.column.dragover{outline:2px dashed var(--blue);outline-offset:-2px;background:#e3edf9}
-.task{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:grab;box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s,border-color .15s}
-.task:hover{transform:translateY(-2px);border-color:#5b6b7f;box-shadow:0 8px 18px rgba(16,24,40,.12)}
+.column.dragover{outline:2px dashed var(--blue);outline-offset:-2px;background:#d8ecec}
+.task{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:grab;box-shadow:var(--shadow-sm);transition:transform .15s,box-shadow .15s,border-color .15s}
+.task:hover{transform:translateY(-2px);border-color:var(--teal);box-shadow:0 8px 18px rgba(16,24,40,.12)}
 .task:active{cursor:grabbing}
-.task .t{font-weight:700;font-size:15px;color:var(--navy)}
+.task .t{font-weight:700;font-size:15px;color:var(--ink)}
 .task .m{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
 .badge-cam{font-size:12px;font-weight:600;color:var(--blue);margin-top:6px}
 .badge-cam .anticon{margin-right:4px}
 .var-bad{color:var(--red);font-weight:700}
-.var-ok{color:#166534;font-weight:600}
+.var-ok{color:#2d701e;font-weight:600}
 
 /* ---- Gallery (antd Image thumbnails) ---- */
 .gallery{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0}
@@ -123,9 +152,9 @@ main:focus{outline:none}
 
 /* ---- Calendar (custom month grid) ---- */
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-.cal .day{background:#fff;border:1px solid var(--line);border-radius:12px;min-height:96px;padding:8px;font-size:12px;cursor:pointer;box-shadow:var(--shadow-sm);transition:border-color .15s,box-shadow .15s}
-.cal .day:hover{border-color:#5b6b7f;box-shadow:var(--shadow-md)}
-.cal .day.today{outline:2px solid var(--blue);background:#eff6ff}
+.cal .day{background:var(--card);border:1px solid var(--line);border-radius:12px;min-height:96px;padding:8px;font-size:12px;cursor:pointer;box-shadow:var(--shadow-sm);transition:border-color .15s,box-shadow .15s}
+.cal .day:hover{border-color:var(--teal);box-shadow:var(--shadow-md)}
+.cal .day.today{outline:2px solid var(--blue);background:#d8ecec}
 .cal .day b{font-size:13px}
 .cal .day div{overflow-wrap:anywhere}
 .cal .dow{font-weight:700;text-align:center;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 0}
@@ -138,7 +167,7 @@ main:focus{outline:none}
      dismisses it. */
   .sidebar{position:fixed;left:0;top:0;bottom:0;width:min(280px,85vw);flex:none;z-index:60;transform:translateX(-102%);transition:transform .2s ease;box-shadow:var(--shadow-lg)}
   .sidebar.drawer-open{transform:translateX(0)}
-  .sidebar-backdrop{display:block;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:55}
+  .sidebar-backdrop{display:block;position:fixed;inset:0;background:rgba(17,17,27,.6);z-index:55}
   .sidebar-close{display:flex;align-items:center;justify-content:center;position:absolute;top:12px;right:12px;width:44px;height:44px;border:1px solid var(--line);background:var(--card);border-radius:50%;cursor:pointer;font-weight:700;color:var(--ink)}
   .sidebar-brand{padding-right:48px}
   .topbar{padding:14px 16px}
@@ -156,35 +185,35 @@ main:focus{outline:none}
    components. Only the custom parts get overrides here. */
 [data-theme="dark"]{
   color-scheme:dark;
-  --navy:#dbe7f5; --navy-2:#c3d5ea;
-  --ink:#e8edf3; --ink-2:#cbd5e1; --muted:#94a3b8;
-  --line:#7c8aa0; --bg:#0e1626;
-  --focus:#7fb3ec;
-  --card:#1a2740; --col:#141f31;
+  --teal:#94e2d5; --blue:#81c3b8; --red:#f38ba8;
+  --ink:#cdd6f4; --ink-2:#bac2de; --muted:#bac2de;
+  --line:#9399b2; --bg:#1e1e2e;
+  --focus:#94e2d5;
+  --card:#313244; --col:#181825;
   --shadow-sm:0 1px 2px rgba(0,0,0,.4),0 2px 6px rgba(0,0,0,.3);
   --shadow-md:0 1px 2px rgba(0,0,0,.4),0 8px 20px rgba(0,0,0,.45);
   --shadow-lg:0 24px 60px rgba(0,0,0,.6);
 }
-[data-theme="dark"] h2,[data-theme="dark"] h3,[data-theme="dark"] h4,[data-theme="dark"] .task .t{color:var(--ink)}
-[data-theme="dark"] a{color:#7fb3ec}
-/* Dark focus: the light focus blue fails 3:1 on dark surfaces, so the
-   focus colour and the today/drag-over outlines use the lighter --focus
-   here (finding 3). */
-[data-theme="dark"] .cal .day.today{outline-color:var(--focus)}
-[data-theme="dark"] .column.dragover{outline-color:var(--focus)}
-[data-theme="dark"] .topbar{background:linear-gradient(180deg,#1b3355,#101d33)}
-[data-theme="dark"] .sidebar{background:#16233a;border-right-color:var(--line)}
-[data-theme="dark"] .brand-name{color:var(--ink)}
-[data-theme="dark"] .sidebar-close{background:#1e2f4d;color:var(--ink);border-color:var(--line)}
-[data-theme="dark"] .column{background:var(--col);border-color:var(--line)}
-[data-theme="dark"] .column.dragover{background:rgba(20,102,194,.28)}
+/* --blue is the effective antd link colour in dark mode (#81c3b8,
+   the dark algorithm's derivation of the teal seed); --teal is
+   the raw Mocha teal, used for solid fills where crust text sits on
+   it (brand tile, role tag, selected menu item). */
+[data-theme="dark"] .topbar{background:#11111b;color:var(--ink);box-shadow:none}
+[data-theme="dark"] .sub,[data-theme="dark"] .actor label{color:var(--muted)}
+[data-theme="dark"] .topbar .hamburger-antd{color:var(--ink)}
+[data-theme="dark"] .topbar .hamburger-antd:hover{background:rgba(205,214,244,.12)}
+[data-theme="dark"] .skip-link{background:var(--teal);color:#11111b}
+[data-theme="dark"] .brand-tile{background:var(--teal);color:#11111b}
+[data-theme="dark"] .sidebar{background:#181825;border-right-color:var(--line)}
+[data-theme="dark"] .sidebar-close{background:#313244;color:var(--ink);border-color:var(--line)}
+[data-theme="dark"] .tag-demo{background:rgba(249,226,175,.14);color:#f9e2af;border-color:#f9e2af}
+[data-theme="dark"] .tag-role{background:var(--teal);color:#11111b;border-color:var(--teal)}
+[data-theme="dark"] .tag-urgent{background:var(--red);color:#11111b;border-color:var(--red)}
+[data-theme="dark"] .tag-high{background:rgba(243,139,168,.08);color:var(--red);border-color:var(--red)}
+[data-theme="dark"] .stat-ok .ant-statistic-content-value{color:#a6e3a1}
+[data-theme="dark"] .column{background:var(--col);border-color:var(--line);box-shadow:inset 0 1px 0 rgba(205,214,244,.08),var(--shadow-sm)}
+[data-theme="dark"] .column.dragover{background:rgba(148,226,213,.14)}
 [data-theme="dark"] .task{background:var(--card);border-color:var(--line)}
-[data-theme="dark"] .task:hover{border-color:#5b7ba6}
-[data-theme="dark"] .var-ok{color:#4ade80}
-[data-theme="dark"] .var-bad{color:#f87171}
-[data-theme="dark"] .badge-cam{color:#7fb3ec}
+[data-theme="dark"] .var-ok{color:#a6e3a1}
 [data-theme="dark"] .cal .day{background:var(--card)}
-[data-theme="dark"] .cal .day.today{background:rgba(20,102,194,.28)}
-[data-theme="dark"] .cal .day:hover{border-color:#5b7ba6}
-[data-theme="dark"] .stat-warn .ant-statistic-content-value{color:#f87171}
-[data-theme="dark"] .stat-ok .ant-statistic-content-value{color:#4ade80}
+[data-theme="dark"] .cal .day.today{background:rgba(148,226,213,.14)}

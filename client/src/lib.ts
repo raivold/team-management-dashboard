@@ -11,6 +11,7 @@ export interface Shift { id:number; personId:number; date:string; shiftName:stri
 export interface DailyLine { id:number; dayId:number; name:string; unit:string; issuedQty:number; usedQty:number|null; returnedQty:number|null; note:string }
 export interface MaterialDay { id:number; date:string; status:string; issuedById:number|null; submittedById:number|null; checkedById:number|null; checkNote:string; lines:DailyLine[] }
 export interface ActivityItem { id:number; actorId:number|null; taskId:number|null; text:string; createdAt:string }
+export interface AccountRow { id:number; personId:number; username:string; isAdmin:number; disabled:number; mustChangePassword:number; createdAt:string; personName:string; personRole:string; personDepartment:string }
 export interface State { people:Person[]; columns:Column[]; tasks:Task[]; shifts:Shift[]; materialDays:MaterialDay[]; activity:ActivityItem[]; materialNames:string[] }
 
 // The antd useApp() modal API, passed down through view/modal contexts so
@@ -90,6 +91,24 @@ en: {
   import_done:'Import done', created_w:'created', replaced_w:'replaced', skipped_w:'skipped',
   due_prefix:'Due', priority_word:'Priority', customer_word:'Customer', dropped_by:'Dropped by', assigned_to:'Assigned to',
   checked_by:'checked by', failed_load:'Failed to load: ',
+  login_title:'Log in', login_sub:'Log in with your team account. Sessions last 48 hours.',
+  login_username:'Username', login_password:'Password', login_btn:'Log in',
+  login_failed:'Invalid username or password.', login_session_expired:'Your session expired. Please log in again.',
+  logout_btn:'Log out', logged_in_as:'Logged in as',
+  change_pw_title:'Change your password', change_pw_sub:'This is your first log in, or your password was reset. Set a new password to continue.',
+  change_pw_current:'Current password', change_pw_new:'New password', change_pw_confirm:'Repeat new password',
+  change_pw_btn:'Change password', change_pw_mismatch:'The new passwords do not match.',
+  change_pw_short:'Password must be at least 8 characters.', change_pw_done:'Password changed.',
+  nav_admin:'Admin', admin_title:'Accounts',
+  admin_sub:'One account per person. Only the app admin can create accounts, reset passwords, or disable accounts.',
+  admin_new:'Create account', admin_person:'Person', admin_username:'Username',
+  admin_first_pw:'First password', admin_is_admin:'App admin', admin_create_btn:'Create account',
+  admin_created:'Account created.', admin_no_accounts:'No accounts yet.',
+  admin_reset_pw:'Reset password', admin_new_pw:'New password',
+  admin_reset_done:'Password reset. The user must change it on first log in.',
+  admin_disable:'Disable', admin_enable:'Enable', admin_disabled:'Disabled',
+  admin_must_change:'Must change password', admin_pick_person:'Pick a person',
+  admin_yes:'Yes', admin_no:'No',
 },
 id: {
   nav_overview:'Ringkasan', nav_board:'Papan', nav_log:'Log', nav_materials:'Material', nav_team:'Tim',
@@ -162,6 +181,24 @@ id: {
   import_done:'Impor selesai', created_w:'dibuat', replaced_w:'diganti', skipped_w:'dilewati',
   due_prefix:'Jatuh tempo', priority_word:'Prioritas', customer_word:'Pelanggan', dropped_by:'Dibuat oleh', assigned_to:'Ditugaskan ke',
   checked_by:'diperiksa oleh', failed_load:'Gagal memuat: ',
+  login_title:'Masuk', login_sub:'Masuk dengan akun tim Anda. Sesi berlaku 48 jam.',
+  login_username:'Nama pengguna', login_password:'Kata sandi', login_btn:'Masuk',
+  login_failed:'Nama pengguna atau kata sandi salah.', login_session_expired:'Sesi Anda berakhir. Silakan masuk lagi.',
+  logout_btn:'Keluar', logged_in_as:'Masuk sebagai',
+  change_pw_title:'Ubah kata sandi Anda', change_pw_sub:'Ini pertama kalinya Anda masuk, atau kata sandi Anda direset. Atur kata sandi baru untuk melanjutkan.',
+  change_pw_current:'Kata sandi saat ini', change_pw_new:'Kata sandi baru', change_pw_confirm:'Ulangi kata sandi baru',
+  change_pw_btn:'Ubah kata sandi', change_pw_mismatch:'Kata sandi baru tidak cocok.',
+  change_pw_short:'Kata sandi minimal 8 karakter.', change_pw_done:'Kata sandi diubah.',
+  nav_admin:'Admin', admin_title:'Akun',
+  admin_sub:'Satu akun per orang. Hanya admin aplikasi yang bisa membuat akun, mereset kata sandi, atau menonaktifkan akun.',
+  admin_new:'Buat akun', admin_person:'Orang', admin_username:'Nama pengguna',
+  admin_first_pw:'Kata sandi pertama', admin_is_admin:'Admin aplikasi', admin_create_btn:'Buat akun',
+  admin_created:'Akun dibuat.', admin_no_accounts:'Belum ada akun.',
+  admin_reset_pw:'Reset kata sandi', admin_new_pw:'Kata sandi baru',
+  admin_reset_done:'Kata sandi direset. Pengguna harus mengubahnya saat pertama masuk.',
+  admin_disable:'Nonaktifkan', admin_enable:'Aktifkan', admin_disabled:'Nonaktif',
+  admin_must_change:'Harus ganti kata sandi', admin_pick_person:'Pilih orang',
+  admin_yes:'Ya', admin_no:'Tidak',
 }};
 
 export const tr = (lang:Lang, k:string):string => (I18N[lang] && (I18N[lang] as any)[k]) || (I18N.en as any)[k] || k;
